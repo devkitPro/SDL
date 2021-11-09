@@ -67,12 +67,12 @@ static inline void contextUnlock(_THIS)
 
 static void N3DSAUD_LockAudio(_THIS)
 {
-	contextLock(this);
+	SDL_mutexP(this->mixer_lock);
 }
 
 static void N3DSAUD_UnlockAudio(_THIS)
 {
-	contextUnlock(this);
+	SDL_mutexV(this->mixer_lock);
 }
 
 static void N3DSAUD_DeleteDevice(SDL_AudioDevice *device)
