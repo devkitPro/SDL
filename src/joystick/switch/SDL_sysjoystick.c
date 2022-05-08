@@ -101,16 +101,18 @@ static void SWITCH_ShowControllerSupport(void) {
             // update pad mapping
             if (!(state[i].pad_style & HidNpadStyleTag_NpadJoyDual) &&
                 (state[i].pad_type & HidDeviceTypeBits_JoyLeft)) {
+                hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
                 state[i].pad_mapping = (HidNpadButton *) &pad_mapping_left_joy;
             } else if (!(state[i].pad_style & HidNpadStyleTag_NpadJoyDual) &&
                        (state[i].pad_type & HidDeviceTypeBits_JoyRight)) {
+                hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
                 state[i].pad_mapping = (HidNpadButton *) &pad_mapping_right_joy;
             } else {
                 state[i].pad_mapping = (HidNpadButton *) &pad_mapping_default;
             }
             // update vibration stuff ?
             hidInitializeVibrationDevices(&state[i].vibrationDeviceHandles, 1,
-                                          HidNpadIdType_No1 + i, state[i].pad_style);
+                                          i, state[i].pad_style);
             // reset sdl joysticks states
             SDL_PrivateJoystickAxis(joy, 0, 0);
             SDL_PrivateJoystickAxis(joy, 1, 0);
