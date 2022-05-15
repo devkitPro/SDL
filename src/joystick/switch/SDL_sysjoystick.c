@@ -84,12 +84,14 @@ static const HidNpadButton pad_mapping_right_joy[] = {
         BIT(31), BIT(31), BIT(31), BIT(31)
 };
 
-static void SWITCH_ShowControllerSupport(void) {
-    HidLaControllerSupportResultInfo info;
-    HidLaControllerSupportArg args;
-    hidLaCreateControllerSupportArg(&args);
-    args.hdr.player_count_max = JOYSTICK_COUNT;
-    hidLaShowControllerSupportForSystem(&info, &args, false);
+static void SWITCH_UpdateControllerSupport(bool handheld) {
+    if (!handheld) {
+        HidLaControllerSupportResultInfo info;
+        HidLaControllerSupportArg args;
+        hidLaCreateControllerSupportArg(&args);
+        args.hdr.player_count_max = JOYSTICK_COUNT;
+        hidLaShowControllerSupportForSystem(&info, &args, false);
+    }
 
     // update pads states
     for (int i = 0; i < JOYSTICK_COUNT; i++) {
@@ -101,18 +103,16 @@ static void SWITCH_ShowControllerSupport(void) {
             // update pad mapping
             if (!(state[i].pad_style & HidNpadStyleTag_NpadJoyDual) &&
                 (state[i].pad_type & HidDeviceTypeBits_JoyLeft)) {
-                hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
                 state[i].pad_mapping = (HidNpadButton *) &pad_mapping_left_joy;
             } else if (!(state[i].pad_style & HidNpadStyleTag_NpadJoyDual) &&
                        (state[i].pad_type & HidDeviceTypeBits_JoyRight)) {
-                hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
                 state[i].pad_mapping = (HidNpadButton *) &pad_mapping_right_joy;
             } else {
                 state[i].pad_mapping = (HidNpadButton *) &pad_mapping_default;
             }
             // update vibration stuff ?
             hidInitializeVibrationDevices(&state[i].vibrationDeviceHandles, 1,
-                                          i, state[i].pad_style);
+                                          HidNpadIdType_No1 + i, state[i].pad_style);
             // reset sdl joysticks states
             SDL_PrivateJoystickAxis(joy, 0, 0);
             SDL_PrivateJoystickAxis(joy, 1, 0);
@@ -136,17 +136,39 @@ static int SWITCH_JoystickInit(void) {
     // initialize first pad to defaults
     padInitializeDefault(&state[0].pad);
     padUpdate(&state[0].pad);
-    state[0].pad_mapping = (HidNpadButton *) &pad_mapping_default;
+    hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
+
     state[0].pad_type = state[0].pad_type_prev = hidGetNpadDeviceType((HidNpadIdType) 0);
     state[0].pad_style = state[0].pad_style_prev = hidGetNpadStyleSet((HidNpadIdType) 0);
+    if (!(state[0].pad_style & HidNpadStyleTag_NpadJoyDual) &&
+        (state[0].pad_type & HidDeviceTypeBits_JoyLeft)) {
+        state[0].pad_mapping = (HidNpadButton*)&pad_mapping_left_joy;
+    }
+    else if (!(state[0].pad_style & HidNpadStyleTag_NpadJoyDual) &&
+             (state[0].pad_type & HidDeviceTypeBits_JoyRight)) {
+        state[0].pad_mapping = (HidNpadButton*)&pad_mapping_right_joy;
+    }
+    else {
+        state[0].pad_mapping = (HidNpadButton*)&pad_mapping_default;
+    }
 
     // initialize pad and vibrations for pad 1 to 7
     for (int i = 1; i < JOYSTICK_COUNT; i++) {
         padInitialize(&state[i].pad, HidNpadIdType_No1 + i);
         padUpdate(&state[i].pad);
-        state[i].pad_mapping = (HidNpadButton *) &pad_mapping_default;
         state[i].pad_type = state[i].pad_type_prev = hidGetNpadDeviceType((HidNpadIdType) i);
         state[i].pad_style = state[i].pad_style_prev = hidGetNpadStyleSet((HidNpadIdType) i);
+        if (!(state[i].pad_style & HidNpadStyleTag_NpadJoyDual) &&
+            (state[i].pad_type & HidDeviceTypeBits_JoyLeft)) {
+            state[i].pad_mapping = (HidNpadButton*)&pad_mapping_left_joy;
+        }
+        else if (!(state[i].pad_style & HidNpadStyleTag_NpadJoyDual) &&
+                 (state[i].pad_type & HidDeviceTypeBits_JoyRight)) {
+            state[i].pad_mapping = (HidNpadButton*)&pad_mapping_right_joy;
+        }
+        else {
+            state[i].pad_mapping = (HidNpadButton*)&pad_mapping_default;
+        }
         hidInitializeVibrationDevices(&state[i].vibrationDeviceHandles, 1,
                                       HidNpadIdType_No1 + i, state[i].pad_style);
     }
@@ -254,7 +276,7 @@ static void SWITCH_JoystickUpdate(SDL_Joystick *joystick) {
     state[index].pad_style = hidGetNpadStyleSet((HidNpadIdType) index);
     if (state[index].pad_type != state[index].pad_type_prev
         || state[index].pad_style != state[index].pad_style_prev) {
-        SWITCH_ShowControllerSupport();
+        SWITCH_UpdateControllerSupport(padIsHandheld(&state[index].pad) ? true : false);
         return;
     }
 
