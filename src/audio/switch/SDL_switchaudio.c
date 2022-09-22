@@ -173,6 +173,7 @@ SWITCHAUDIO_PlayDevice(_THIS)
 static void
 SWITCHAUDIO_WaitDevice(_THIS)
 {
+    (void)this;
 }
 
 static Uint8
@@ -202,7 +203,7 @@ SWITCHAUDIO_CloseDevice(_THIS)
 static void
 SWITCHAUDIO_ThreadInit(_THIS)
 {
-
+    (void)this;
 }
 
 static int
@@ -220,8 +221,8 @@ SWITCHAUDIO_Init(SDL_AudioDriverImpl *impl)
     return 1;
 }
 
-AudioBootStrap SWITCHAUDIO_bootstrap = {
-    "switch", "Nintendo Switch audio driver", SWITCHAUDIO_Init, 0
+AudioBootStrap SWITCHAUDIOREN_bootstrap = {
+    "switch", "Nintendo Switch audio render driver", SWITCHAUDIO_Init, 0
 };
 
 #endif /* SDL_AUDIO_DRIVER_SWITCH */
