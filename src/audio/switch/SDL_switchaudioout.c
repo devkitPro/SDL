@@ -107,15 +107,6 @@ SWITCHAUDIO_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
     this->hidden->cur_buffer = this->hidden->next_buffer;
     this->hidden->next_buffer = (this->hidden->next_buffer + 1) % NUM_BUFFERS;
 
-    res = audoutStartAudioOut();
-    if (R_FAILED(res)) {
-        free(this->hidden->rawbuf);
-        this->hidden->rawbuf = NULL;
-        SDL_free(this->hidden);
-        this->hidden = NULL;
-        return SDL_SetError("audoutStartAudioOut failed (0x%x)", res);
-    }
-
     res = audoutAppendAudioOutBuffer(&this->hidden->buffer[this->hidden->cur_buffer]);
     if (R_FAILED(res)) {
         free(this->hidden->rawbuf);
@@ -123,6 +114,15 @@ SWITCHAUDIO_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
         SDL_free(this->hidden);
         this->hidden = NULL;
         return SDL_SetError("audoutAppendAudioOutBuffer failed (0x%x)", res);
+    }
+
+    res = audoutStartAudioOut();
+    if (R_FAILED(res)) {
+        free(this->hidden->rawbuf);
+        this->hidden->rawbuf = NULL;
+        SDL_free(this->hidden);
+        this->hidden = NULL;
+        return SDL_SetError("audoutStartAudioOut failed (0x%x)", res);
     }
 
     return 0;
