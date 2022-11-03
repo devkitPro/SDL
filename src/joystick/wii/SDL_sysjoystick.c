@@ -295,7 +295,7 @@ static void _HandleWiiJoystickUpdate(SDL_Joystick* joystick)
 	WPADData *data;
 	const u32 *buttons;
 
-	if (!WPAD_ReadPending(WPAD_CHAN_0, NULL))
+	if (!WPAD_ReadPending(joystick->index, NULL))
 		return;
 	data = WPAD_Data(joystick->index);
 	changed = data->btns_d | data->btns_u;
