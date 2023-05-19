@@ -31,7 +31,7 @@
 #include "../SDL_audio_c.h"
 #include "../SDL_audiodev_c.h"
 
-#include "SDL_switchaudioout.h"
+#include "SDL_switchaudio.h"
 
 static int
 SWITCHAUDIO_OpenDevice(_THIS, void *handle, const char *devname, int iscapture)
