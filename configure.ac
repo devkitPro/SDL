@@ -4690,6 +4690,63 @@ dnl BeOS support removed after SDL 2.0.1. Haiku still works.  --ryan.
             have_joystick=yes
         fi
         ;;
+    aarch64-none-elf*)
+        ARCH=switch
+        SDL_CFLAGS="$SDL_CFLAGS -D__SWITCH__ -march=armv8-a -mtune=cortex-a57 \
+            -mtp=soft -ftls-model=local-exec \
+            -isystem ${DEVKITPRO}/libnx/include -I${DEVKITPRO}/portlibs/switch/include"
+        EXTRA_CFLAGS="$EXTRA_CFLAGS -fPIC"
+        EXTRA_CFLAGS="$EXTRA_CFLAGS $SDL_CFLAGS -g -O3"
+        EXTRA_CFLAGS="$EXTRA_CFLAGS -DSDL_VIDEO_STATIC_ANGLE"
+        EXTRA_LDFLAGS="-march=armv8-a -fPIE -L${DEVKITPRO}/libnx/lib -lEGL -lglapi -ldrm_nouveau -lnx"
+
+        CheckDeclarationAfterStatement
+        CheckClockGettime
+        CheckPTHREAD
+
+        # Set up files for the power library
+        if test x$enable_power = xyes; then
+            AC_DEFINE(SDL_POWER_SWITCH, 1, [ ])
+            SOURCES="$SOURCES $srcdir/src/power/switch/SDL_syspower.c"
+            have_power=yes
+        fi
+        # Set up files for the filesystem library
+        if test x$enable_filesystem = xyes; then
+            AC_DEFINE(SDL_FILESYSTEM_SWITCH, 1, [ ])
+            SOURCES="$SOURCES $srcdir/src/filesystem/switch/SDL_sysfilesystem.c"
+            have_filesystem=yes
+        fi
+        # Set up files for the video library
+        if test x$enable_video = xyes; then
+            SOURCES="$SOURCES $srcdir/src/video/switch/*.c"
+            AC_DEFINE(SDL_VIDEO_DRIVER_SWITCH, 1, [ ])
+            AC_DEFINE(SDL_VIDEO_OPENGL_EGL, 1, [ ])
+            AC_DEFINE(SDL_VIDEO_OPENGL, 1, [ ])
+            AC_DEFINE(SDL_VIDEO_OPENGL_ES2, 1, [ ])
+            AC_DEFINE(SDL_VIDEO_RENDER_OGL_ES2, 1, [ ])
+            SUMMARY_video="${SUMMARY_video} switch_opengles2"
+            have_video=yes
+        fi
+        # Set up files for the audio library
+        if test x$enable_audio = xyes; then
+           AC_DEFINE(SDL_AUDIO_DRIVER_SWITCH, 1, [ ])
+           SOURCES="$SOURCES $srcdir/src/audio/switch/*.c"
+           SUMMARY_audio="${SUMMARY_audio} switch"
+           have_audio=yes
+        fi
+        # Set up files for the joystick library
+        if test x$enable_joystick = xyes; then
+            AC_DEFINE(SDL_JOYSTICK_SWITCH, 1, [ ])
+            SOURCES="$SOURCES $srcdir/src/joystick/switch/*.c"
+            have_joystick=yes
+        fi
+        # Set up files for the timer library
+        if test x$enable_timers = xyes; then
+            AC_DEFINE(SDL_TIMER_SWITCH, 1, [ ])
+            SOURCES="$SOURCES $srcdir/src/timer/switch/*.c"
+            have_timers=yes
+        fi
+        ;;
     *)
         AC_MSG_ERROR([
 *** Unsupported host:  Please add to configure.ac

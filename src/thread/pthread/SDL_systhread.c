@@ -59,8 +59,12 @@
 #include <kernel/OS.h>
 #endif
 
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
 
-#ifndef __NACL__
+
+#if !defined(__NACL__) && !defined(__SWITCH__)
 /* List of signals to mask in the subthreads */
 static const int sig_list[] = {
     SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM, SIGTERM, SIGCHLD, SIGWINCH,
@@ -122,10 +126,10 @@ int SDL_SYS_CreateThread(SDL_Thread *thread)
 
 void SDL_SYS_SetupThread(const char *name)
 {
-#if !defined(__NACL__)
+#if !defined(__NACL__) && !defined(__SWITCH__)
     int i;
     sigset_t mask;
-#endif /* !__NACL__ */
+#endif /* !__NACL__ && !__NINTENDO_SWITCH__ */
 
     if (name != NULL) {
         #if (defined(__MACOSX__) || defined(__IPHONEOS__) || defined(__LINUX__)) && defined(HAVE_DLOPEN)
@@ -162,14 +166,14 @@ void SDL_SYS_SetupThread(const char *name)
     }
 
    /* NativeClient does not yet support signals.*/
-#if !defined(__NACL__)
+#if !defined(__NACL__) && !defined(__SWITCH__)
     /* Mask asynchronous signals for this thread */
     sigemptyset(&mask);
     for (i = 0; sig_list[i]; ++i) {
         sigaddset(&mask, sig_list[i]);
     }
     pthread_sigmask(SIG_BLOCK, &mask, 0);
-#endif /* !__NACL__ */
+#endif /* !__NACL__ && !__NINTENDO_SWITCH__ */
 
 
 #ifdef PTHREAD_CANCEL_ASYNCHRONOUS
@@ -190,6 +194,20 @@ int SDL_SYS_SetThreadPriority(SDL_ThreadPriority priority)
 {
 #if __NACL__ || __RISCOS__ || __OS2__
     /* FIXME: Setting thread priority does not seem to be supported in NACL */
+    return 0;
+#elif __SWITCH__
+    Result res;
+    if (priority == SDL_THREAD_PRIORITY_HIGH) {
+        res = svcSetThreadPriority(CUR_THREAD_HANDLE, 0x2B);
+    } else {
+        // 0x3B = preemptive threading
+        res = svcSetThreadPriority(CUR_THREAD_HANDLE, 0x3B);
+    }
+
+    if(R_FAILED(res)) {
+        return SDL_SetError("SDL_SYS_SetThreadPriority: svcSetThreadPriority failed (%x)", res);
+    }
+
     return 0;
 #else
     struct sched_param sched;
