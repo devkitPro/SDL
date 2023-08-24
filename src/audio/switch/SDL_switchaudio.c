@@ -152,6 +152,7 @@ static void
 SWITCHAUDIO_CloseDevice(_THIS)
 {
     audoutStopAudioOut();
+    audoutExit();
 
     if (this->hidden->rawbuf) {
         free(this->hidden->rawbuf);
