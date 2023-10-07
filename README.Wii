@@ -1,0 +1,40 @@
+# SDL port to Nintendo GameCube/Wii
+
+This port uses the libogc library on the devKitPro toolchain, available from
+http://www.devkitpro.org
+
+
+## Installation instructions
+
+Pre-built packages are available from the devkitPro repository and can be
+installed via the [pacman](https://devkitpro.org/wiki/devkitPro_pacman) tool.
+If you want to compile this yourself, read on.
+
+
+## Build instructions
+
+Make sure you have setup the environment to build under devkitPro. This is
+typically done be running the command
+
+    source /etc/profile.d/devkit-env.sh
+
+Then, libSDL can be built using the following commands:
+
+    source ${DEVKITPRO}/wiivars.sh
+    ./autogen.sh  # this will print lots of warnings, hich are safe to ignore
+    ./configure --prefix="${PORTLIBS_PREFIX}" \
+        --host=powerpc-eabi \
+        --disable-shared \
+        --enable-static \
+        --enable-nintendo-wii \
+        ac_cv_header_signal=no \
+        ac_cv_header_signal_h=no \
+        ac_cv_func_sigaction=no
+    make
+    # To install the library into devkitPro's rootfs
+    sudo PATH=$PATH make install
+
+Should these instructions become obsolete, please have a look at [devkitPro's
+pacman recipe for
+SDL](https://github.com/devkitPro/pacman-packages/tree/master/wii/SDL), which
+will probably give you a hint on how to update these manual build commands.
