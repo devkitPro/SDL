@@ -49,7 +49,7 @@ void *run_thread(void *data)
 int SDL_SYS_CreateThread(SDL_Thread *thread, void *args)
 {
 	
-	if ( LWP_CreateThread(&thread->handle, run_thread, args, 0, 0, 64) != 0 ) {
+	if ( LWP_CreateThread(&thread->handle, run_thread, args, 0, 0, 63) != 0 ) {
 		SDL_SetError("Not enough resources to create thread");
 		return(-1);
 	}
