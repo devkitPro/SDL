@@ -2937,7 +2937,7 @@ elseif(OGC)
   endif()
 
   if(NOT SDL2_DISABLE_SDL2MAIN)
-    list(APPEND EXTRA_LIBS "SDL2main")
+    list(INSERT SDL_LIBS 0 "-lSDL2main")
     list(APPEND EXTRA_LIBS "fat")
   endif()
 endif()
