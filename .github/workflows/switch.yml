@@ -8,23 +8,22 @@ jobs:
     container:
       image: devkitpro/devkita64:latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Configure
         run: |
-          . /opt/devkitpro/switchvars.sh
-          mkdir _build && cd _build
-          ../configure --host=aarch64-none-elf \
-              --prefix=`pwd`/switch-sdl2 \
-              --disable-shared --enable-static \
-              --enable-audio \
-              --enable-joystick \
-              --disable-power \
-              --disable-filesystem \
-              --enable-cpuinfo \
-              --enable-pthreads \
-              --enable-timers \ 
-              --enable-video
+          source /opt/devkitpro/switchvars.sh
+
+        ./configure --prefix=`pwd`/switch-sdl2 --host=aarch64-none-elf \
+          --disable-shared --enable-static \
+          --enable-audio \
+          --enable-joystick \
+          --disable-power \
+          --disable-filesystem \
+          --enable-cpuinfo \
+          --enable-pthreads \
+          --enable-timers \
+          --enable-video
       - name: Build
-        run: make -C _build 
+        run: make
       - name: install
-        run: make -C _build install
+        run: make install
