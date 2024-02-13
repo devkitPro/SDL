@@ -23,6 +23,10 @@ jobs:
             --enable-timers \
             --enable-video
       - name: Build
-        run: make
-      - name: install
-        run: make install
+        run: |
+          . /opt/devkitpro/switchvars.sh
+          make
+      - name: Install
+        run: |
+          . /opt/devkitpro/switchvars.sh
+          make install
