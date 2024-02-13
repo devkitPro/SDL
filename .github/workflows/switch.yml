@@ -13,16 +13,16 @@ jobs:
         run: |
           source /opt/devkitpro/switchvars.sh
 
-        ./configure --prefix=`pwd`/switch-sdl2 --host=aarch64-none-elf \
-          --disable-shared --enable-static \
-          --enable-audio \
-          --enable-joystick \
-          --disable-power \
-          --disable-filesystem \
-          --enable-cpuinfo \
-          --enable-pthreads \
-          --enable-timers \
-          --enable-video
+          ./configure --prefix=`pwd`/switch-sdl2 --host=aarch64-none-elf \
+            --disable-shared --enable-static \
+            --enable-audio \
+            --enable-joystick \
+            --disable-power \
+            --disable-filesystem \
+            --enable-cpuinfo \
+            --enable-pthreads \
+            --enable-timers \
+            --enable-video
       - name: Build
         run: make
       - name: install
