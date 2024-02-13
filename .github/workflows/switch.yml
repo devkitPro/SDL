@@ -11,8 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure
         run: |
-          source /opt/devkitpro/switchvars.sh
-
+          . /opt/devkitpro/switchvars.sh
           ./configure --prefix=`pwd`/switch-sdl2 --host=aarch64-none-elf \
             --disable-shared --enable-static \
             --enable-audio \
