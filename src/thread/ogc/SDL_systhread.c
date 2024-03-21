@@ -80,6 +80,12 @@ void SDL_SYS_WaitThread(SDL_Thread *thread)
     return;
 }
 
+void SDL_SYS_DetachThread(SDL_Thread *thread)
+{
+    /* Do nothing. */
+    thread->handle = LWP_THREAD_NULL;
+}
+
 void SDL_SYS_KillThread(SDL_Thread *thread)
 {
     return;
