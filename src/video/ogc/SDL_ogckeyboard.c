@@ -36,8 +36,8 @@ void OGC_PumpKeyboardEvents(_THIS) {
             const Uint16 symbol = ke.symbol;
             char utf8[4] = {'\0'};
 
-            /* invalid characters */
-            if ((symbol >= 0xD800 && symbol < 0xE000) || symbol == 0xFFFF)
+            /* ignore private symbols, used by wiikeyboard for special keys */
+            if ((symbol >= 0xE000 && symbol <= 0xF8FF) || symbol == 0xFFFF)
                 return;
 
             /* convert UCS-2 to UTF-8 */
