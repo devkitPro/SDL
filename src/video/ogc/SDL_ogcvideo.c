@@ -241,8 +241,6 @@ static SDL_VideoDevice *OGC_CreateDevice(void)
     device->CreateWindowFramebuffer = SDL_OGC_CreateWindowFramebuffer;
     device->UpdateWindowFramebuffer = SDL_OGC_UpdateWindowFramebuffer;
     device->DestroyWindowFramebuffer = SDL_OGC_DestroyWindowFramebuffer;
-    device->StartTextInput = OGC_StartTextInput;
-    device->StopTextInput = OGC_StopTextInput;
 
     device->free = OGC_DeleteDevice;
 

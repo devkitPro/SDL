@@ -25,8 +25,6 @@
 #include <gctypes.h>
 #include <wiikeyboard/keyboard.h>
 
-static int send_text_input = 0;
-
 void OGC_PumpKeyboardEvents(_THIS) {
     keyboard_event ke;
 
@@ -34,12 +32,12 @@ void OGC_PumpKeyboardEvents(_THIS) {
     if (res && (ke.type == KEYBOARD_RELEASED || ke.type == KEYBOARD_PRESSED)) {
         SDL_SendKeyboardKey((ke.type == KEYBOARD_PRESSED) ? SDL_PRESSED : SDL_RELEASED, (SDL_Scancode)ke.keycode);
 
-        if (send_text_input && ke.type == KEYBOARD_PRESSED) {
+        if (ke.type == KEYBOARD_PRESSED) {
             const Uint16 symbol = ke.symbol;
             char utf8[4] = {'\0'};
 
             /* invalid characters */
-            if ((c >= 0xD800 && c < 0xE000) || c == 0xFFFF)
+            if ((symbol >= 0xD800 && symbol < 0xE000) || symbol == 0xFFFF)
                 return;
 
             /* convert UCS-2 to UTF-8 */
@@ -57,15 +55,5 @@ void OGC_PumpKeyboardEvents(_THIS) {
             SDL_SendKeyboardText(utf8);
         }
     }
-}
-
-void OGC_StartTextInput(_THIS)
-{
-    send_text_input = 1;
-}
-
-void OGC_StopTextInput(_THIS)
-{
-    send_text_input = 0;
 }
 #endif

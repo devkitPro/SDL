@@ -27,8 +27,6 @@
 
 #ifdef __wii__
 void OGC_PumpKeyboardEvents(_THIS);
-void OGC_StartTextInput(_THIS);
-void OGC_StopTextInput(_THIS);
 #endif
 
 #endif /* SDL_OGC_keyboard_h_ */
