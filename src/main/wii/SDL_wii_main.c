@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     WPAD_SetVRes(WPAD_CHAN_ALL, 640, 480);
 
     MOUSE_Init();
-    // TODO KEYBOARD_Init(NULL);
+    KEYBOARD_Init(NULL);
     fatInitDefault();
 
     /* Call the user's main function. Make sure that argv contains at least one

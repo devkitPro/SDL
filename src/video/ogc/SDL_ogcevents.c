@@ -29,6 +29,7 @@
 #include "SDL_ogcevents_c.h"
 #include "SDL_ogcmouse.h"
 #include "SDL_ogcvideo.h"
+#include "SDL_ogckeyboard.h"
 
 #include <ogc/system.h>
 #include <wiiuse/wpad.h>
@@ -99,6 +100,7 @@ void OGC_PumpEvents(_THIS)
 
 #ifdef __wii__
     pump_ir_events(_this);
+    OGC_PumpKeyboardEvents(_this);
 #endif
 }
 

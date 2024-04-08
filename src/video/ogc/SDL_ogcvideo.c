@@ -33,6 +33,7 @@
 #include "SDL_ogcframebuffer_c.h"
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
+#include "SDL_ogckeyboard.h"
 #include "SDL_ogcvideo.h"
 
 #include <malloc.h>
@@ -240,6 +241,8 @@ static SDL_VideoDevice *OGC_CreateDevice(void)
     device->CreateWindowFramebuffer = SDL_OGC_CreateWindowFramebuffer;
     device->UpdateWindowFramebuffer = SDL_OGC_UpdateWindowFramebuffer;
     device->DestroyWindowFramebuffer = SDL_OGC_DestroyWindowFramebuffer;
+    device->StartTextInput = OGC_StartTextInput;
+    device->StopTextInput = OGC_StopTextInput;
 
     device->free = OGC_DeleteDevice;
 
