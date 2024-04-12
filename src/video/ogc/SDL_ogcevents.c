@@ -27,9 +27,9 @@
 #include "../../events/SDL_events_c.h"
 
 #include "SDL_ogcevents_c.h"
+#include "SDL_ogckeyboard.h"
 #include "SDL_ogcmouse.h"
 #include "SDL_ogcvideo.h"
-#include "SDL_ogckeyboard.h"
 
 #include <ogc/system.h>
 #include <wiiuse/wpad.h>

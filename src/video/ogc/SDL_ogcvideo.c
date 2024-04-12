@@ -33,7 +33,6 @@
 #include "SDL_ogcframebuffer_c.h"
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
-#include "SDL_ogckeyboard.h"
 #include "SDL_ogcvideo.h"
 
 #include <malloc.h>
