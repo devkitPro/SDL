@@ -9,8 +9,8 @@ Credits to:
 
 ## Building
 
-
 To build for the Nintendo GameCube or Wii, make sure you have devkitPPC and cmake installed and run:
+
 ```bash
 cmake -S. -Bbuild -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Wii.cmake" -DCMAKE_BUILD_TYPE=Release
 cmake --build build
