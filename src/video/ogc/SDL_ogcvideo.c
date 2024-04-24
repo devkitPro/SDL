@@ -31,6 +31,7 @@
 #include "SDL_hints.h"
 #include "SDL_ogcevents_c.h"
 #include "SDL_ogcframebuffer_c.h"
+#include "SDL_ogcgl.h"
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
 #include "SDL_ogcvideo.h"
@@ -240,6 +241,19 @@ static SDL_VideoDevice *OGC_CreateDevice(void)
     device->CreateWindowFramebuffer = SDL_OGC_CreateWindowFramebuffer;
     device->UpdateWindowFramebuffer = SDL_OGC_UpdateWindowFramebuffer;
     device->DestroyWindowFramebuffer = SDL_OGC_DestroyWindowFramebuffer;
+
+#ifdef SDL_VIDEO_OPENGL
+    device->GL_LoadLibrary = SDL_OGC_GL_LoadLibrary;
+    device->GL_GetProcAddress = SDL_OGC_GL_GetProcAddress;
+    device->GL_UnloadLibrary = SDL_OGC_GL_UnloadLibrary;
+    device->GL_CreateContext = SDL_OGC_GL_CreateContext;
+    device->GL_MakeCurrent = SDL_OGC_GL_MakeCurrent;
+    device->GL_SetSwapInterval = SDL_OGC_GL_SetSwapInterval;
+    device->GL_GetSwapInterval = SDL_OGC_GL_GetSwapInterval;
+    device->GL_SwapWindow = SDL_OGC_GL_SwapWindow;
+    device->GL_DeleteContext = SDL_OGC_GL_DeleteContext;
+    device->GL_DefaultProfileConfig = SDL_OGC_GL_DefaultProfileConfig;
+#endif
 
     device->free = OGC_DeleteDevice;
 
