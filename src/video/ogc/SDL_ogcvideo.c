@@ -33,6 +33,7 @@
 #include "SDL_ogcframebuffer_c.h"
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
+#include "SDL_ogcosk.h"
 #include "SDL_ogcvideo.h"
 
 #include <malloc.h>
@@ -241,6 +242,14 @@ static SDL_VideoDevice *OGC_CreateDevice(void)
     device->UpdateWindowFramebuffer = SDL_OGC_UpdateWindowFramebuffer;
     device->DestroyWindowFramebuffer = SDL_OGC_DestroyWindowFramebuffer;
 
+    device->StartTextInput = OGC_StartTextInput;
+    device->StopTextInput = OGC_StopTextInput;
+    device->SetTextInputRect = OGC_SetTextInputRect;
+    device->HasScreenKeyboardSupport = OGC_HasScreenKeyboardSupport;
+    device->ShowScreenKeyboard = OGC_ShowScreenKeyboard;
+    device->HideScreenKeyboard = OGC_HideScreenKeyboard;
+    device->IsScreenKeyboardShown = OGC_IsScreenKeyboardShown;
+
     device->free = OGC_DeleteDevice;
 
     return device;
@@ -328,6 +337,20 @@ void OGC_video_flip(_THIS, bool vsync)
 {
     SDL_VideoData *videodata = _this->driverdata;
     void *xfb = OGC_video_get_xfb(_this);
+    int screen_w, screen_h, pan_y;
+    bool must_restore_viewport = false;
+
+    /* While drawing the OSK and the mouse cursor, we want to reset the
+     * viewport to match the whole screen. */
+    screen_w = _this->displays[0].current_mode.w;
+    screen_h = _this->displays[0].current_mode.h;
+    if (OGC_get_screen_pan_y() != 0) {
+        bool honour_panning = false;
+        OGC_set_screen_pan_y(0);
+        OGC_set_viewport(0, 0, screen_w, screen_h, honour_panning);
+        must_restore_viewport = true;
+    }
+    OGC_keyboard_render(_this);
 
 #ifdef __wii__
     OGC_draw_cursor(_this);
@@ -343,6 +366,17 @@ void OGC_video_flip(_THIS, bool vsync)
     }
 
     videodata->fb_index ^= 1;
+
+    /* Set the viewport for the next frame: if the OSK is shown, we need to
+     * check if the application's window must be moved (so that the input rect
+     * is visible even with the OSK open) and, if so, update the viewport
+     * accordingly. */
+    pan_y = OGC_keyboard_get_pan_y(_this);
+    if (must_restore_viewport || pan_y != 0) {
+        bool honour_panning = true;
+        OGC_set_screen_pan_y(pan_y);
+        OGC_set_viewport(0, 0, screen_w, screen_h, honour_panning);
+    }
 }
 
 #endif /* SDL_VIDEO_DRIVER_OGC */

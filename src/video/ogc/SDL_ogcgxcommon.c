@@ -40,9 +40,27 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
     1.0,
 };
 
-void OGC_set_viewport(int x, int y, int w, int h)
+static int s_screen_pan_y = 0;
+
+void OGC_set_screen_pan_y(int y)
+{
+    if (y != s_screen_pan_y) {
+        s_screen_pan_y = y;
+    }
+}
+
+int OGC_get_screen_pan_y()
+{
+    return s_screen_pan_y;
+}
+
+void OGC_set_viewport(int x, int y, int w, int h, bool honour_panning)
 {
     Mtx44 proj;
+
+    if (honour_panning) {
+        y += s_screen_pan_y;
+    }
 
     GX_SetViewport(x, y, w, h, 0, 1);
     GX_SetScissor(x, y, w, h);
@@ -86,7 +104,7 @@ void OGC_draw_init(int w, int h)
     GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
     GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 
-    OGC_set_viewport(0, 0, w, h);
+    OGC_set_viewport(0, 0, w, h, false);
 
     GX_InvVtxCache(); // update vertex cache
 }
