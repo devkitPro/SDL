@@ -925,6 +925,19 @@ AC_HELP_STRING([--enable-ipod], [configure SDL to work with iPodLinux [[default=
     fi
 }
 
+CheckOpenGX()
+{
+    AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+    AC_MSG_CHECKING(for opengx)
+    if test x$PKG_CONFIG != xno; then
+        OPENGX_CFLAGS=`$PKG_CONFIG --cflags opengl`
+        OPENGX_LIBS=`$PKG_CONFIG --libs opengl`
+        opengx=yes
+        AC_DEFINE(SDL_VIDEO_OPENGL)
+    fi
+    AC_MSG_RESULT($opengx)
+}
+
 CheckNintendoWii()
 {
     AC_ARG_ENABLE(nintendo-wii,
@@ -938,11 +951,11 @@ AC_HELP_STRING([--enable-nintendo-wii], [configure SDL to work with Nintendo Wii
                      -I${DEVKITPRO}/portlibs/wii/include \
                      -I${DEVKITPRO}/portlibs/ppc/include"
         EXTRA_CFLAGS="$EXTRA_CFLAGS $WII_CFLAGS"
-        CFLAGS="$CFLAGS $WII_CFLAGS"
+        CFLAGS="$CFLAGS $WII_CFLAGS $OPENGX_CFLAGS"
         SDL_CFLAGS="$SDL_CFLAGS $WII_CFLAGS"
         SDL_LIBS="-mrvl -mcpu=750 -meabi -mhard-float \
                   -L${DEVKITPRO}/portlibs/wii/lib \
-                  -L${DEVKITPRO}/portlibs/ppc/lib -lSDLmain $SDL_LIBS \
+                  -L${DEVKITPRO}/portlibs/ppc/lib -lSDLmain $SDL_LIBS $OPENGX_LIBS \
                   -L${DEVKITPRO}/libogc/lib/wii -laesnd -lwiiuse -lbte -lwiikeyboard -lfat -logc -lm"
         AC_DEFINE(SDL_TIMER_OGC)
         SOURCES="$SOURCES $srcdir/src/timer/ogc/*.c"
@@ -978,11 +991,11 @@ AC_HELP_STRING([--enable-nintendo-gamecube], [configure SDL to work with Nintend
                      -I${DEVKITPRO}/portlibs/gamecube/include \
                      -I${DEVKITPRO}/portlibs/ppc/include"
         EXTRA_CFLAGS="$EXTRA_CFLAGS $GAMECUBE_CFLAGS"
-        CFLAGS="$CFLAGS $GAMECUBE_CFLAGS"
+        CFLAGS="$CFLAGS $GAMECUBE_CFLAGS $OPENGX_CFLAGS"
         SDL_CFLAGS="$SDL_CFLAGS $GAMECUBE_CFLAGS"
         SDL_LIBS="-mogc -mcpu=750 -meabi -mhard-float \
                   -L${DEVKITPRO}/portlibs/gamecube/lib \
-                  -L${DEVKITPRO}/portlibs/ppc/lib -lSDLmain $SDL_LIBS \
+                  -L${DEVKITPRO}/portlibs/ppc/lib -lSDLmain $SDL_LIBS $OPENGX_LIBS \
                   -L${DEVKITPRO}/libogc/lib/cube -laesnd -lfat -logc -lm"
         AC_DEFINE(SDL_TIMER_OGC)
         SOURCES="$SOURCES $srcdir/src/timer/ogc/*.c"
@@ -2395,6 +2408,7 @@ AC_HELP_STRING([--enable-rpath], [use an rpath when linking SDL [[default=yes]]]
 dnl Set up the configuration based on the host platform!
 case "$host" in
     powerpc-*-eabi)
+       CheckOpenGX
        CheckNintendoWii
        CheckNintendoGamecube
        ;;

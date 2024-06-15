@@ -32,6 +32,7 @@
 // SDL ogc specifics.
 #include <gccore.h>
 #include <ogcsys.h>
+#include <opengx.h>
 #include <malloc.h>
 #include <wiiuse/wpad.h>
 #include "SDL_ogc_video.h"
@@ -286,7 +287,7 @@ StartVideoThread(void *args)
 	}
 }
 
-void OGC_VideoStart(ogcVideo *private)
+void OGC_VideoStart(ogcVideo *private, Uint32 flags)
 {
 	if (private==NULL) {
 		if (current==NULL)
@@ -296,7 +297,9 @@ void OGC_VideoStart(ogcVideo *private)
 
 	SetupGX();
 	draw_init(private->palette, private->texturemem);
-	StartVideoThread(&private->texturemem);
+	if (!(flags & SDL_OPENGL)) {
+		StartVideoThread(&private->texturemem);
+	}
 #ifdef __wii__
 	WPAD_SetVRes(WPAD_CHAN_0, vresx+vresx/4, vresy+vresy/4);
 #endif
@@ -338,6 +341,9 @@ static int OGC_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	this->hidden->width = 0;
 	this->hidden->height = 0;
 	this->hidden->pitch = 0;
+
+	this->gl_config.driver_loaded = 1;
+	this->gl_config.driver_path[0] = '\0';
 
 	/* We're done! */
 	return 0;
@@ -431,7 +437,7 @@ static SDL_Surface *OGC_SetVideoMode(_THIS, SDL_Surface *current,
 	SDL_memset(this->hidden->texturemem, 0, this->hidden->texturemem_size);
 
 	// Set up the new mode framebuffer
-	current->flags = flags & (SDL_FULLSCREEN | SDL_HWPALETTE | SDL_NOFRAME);
+	current->flags = flags & (SDL_FULLSCREEN | SDL_HWPALETTE | SDL_NOFRAME | SDL_OPENGL);
 	// Our surface is always double buffered
 	current->flags |= SDL_PREALLOC | SDL_DOUBLEBUF;
 	current->w = width;
@@ -450,7 +456,7 @@ static SDL_Surface *OGC_SetVideoMode(_THIS, SDL_Surface *current,
 	vresx = currentwidth;
 	vresy = currentheight;
 
-	OGC_VideoStart(this->hidden);
+	OGC_VideoStart(this->hidden, flags);
 
 	return current;
 }
@@ -740,6 +746,34 @@ static void OGC_DeleteDevice(SDL_VideoDevice *device)
 	videomutex=0;
 }
 
+int SDL_OGC_GL_LoadLibrary(_THIS, const char *path)
+{
+	return 0;
+}
+
+void *SDL_OGC_GL_GetProcAddress(_THIS, const char *proc)
+{
+	void *ptr = ogx_get_proc_address(proc);
+	if (!ptr) {
+		fprintf(stderr, "GetProcAddress %s\n", proc);
+	}
+	return ptr;
+}
+
+int SDL_OGC_GL_MakeCurrent(_THIS)
+{
+	ogx_initialize();
+	return 0;
+}
+
+void SDL_OGC_GL_SwapBuffers(_THIS)
+{
+	VIDEO_WaitVSync();
+	GX_CopyDisp(xfb, GX_FALSE);
+
+	GX_DrawDone();
+}
+
 static SDL_VideoDevice *OGC_CreateDevice(int devindex)
 {
 	SDL_VideoDevice *device;
@@ -784,6 +818,11 @@ static SDL_VideoDevice *OGC_CreateDevice(int devindex)
 	device->PumpEvents = GAMECUBE_PumpEvents;
 #endif
 	device->input_grab = SDL_GRAB_ON;
+
+	device->GL_LoadLibrary = SDL_OGC_GL_LoadLibrary;
+	device->GL_GetProcAddress = SDL_OGC_GL_GetProcAddress;
+	device->GL_MakeCurrent = SDL_OGC_GL_MakeCurrent;
+	device->GL_SwapBuffers = SDL_OGC_GL_SwapBuffers;
 
 	device->free = OGC_DeleteDevice;
 
