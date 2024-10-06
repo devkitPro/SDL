@@ -36,6 +36,7 @@
 #include "../../events/SDL_keyboard_c.h"
 #include "../../events/SDL_events_c.h"
 #include "SDL_wiiuvideo.h"
+#include "SDL_wiiukeyboard.h"
 #include "SDL_wiiu_gfx_heap.h"
 
 #include "../../render/wiiu/SDL_render_wiiu.h"
@@ -269,6 +270,8 @@ static int WIIU_VideoInit(_THIS)
 	mode.refresh_rate = 60;
 	SDL_AddBasicVideoDisplay(&mode);
 
+	videodata->kbd_init = SDL_WIIU_InitKeyboard(_this);
+
 	return 0;
 }
 
@@ -292,6 +295,9 @@ static void WIIU_VideoQuit(_THIS)
 	if (videodata->handleProcUI) {
 		ProcUIShutdown();
 	}
+
+	if (videodata->kbd_init)
+		SDL_WIIU_QuitKeyboard(_this);
 
 	running = SDL_FALSE;
 }
@@ -335,6 +341,8 @@ static void WIIU_PumpEvents(_THIS)
 			ProcUIDrawDoneRelease();
 		}
 	}
+
+	SDL_WIIU_PumpKeyboardEvents(_this);
 }
 
 static void WIIU_DeleteDevice(SDL_VideoDevice *device)
