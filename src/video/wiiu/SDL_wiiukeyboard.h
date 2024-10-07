@@ -1,8 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 2018-2018 Ash Logan <ash@heyquark.com>
-  Copyright (C) 2018-2018 Roberto Van Eeden <r.r.qwertyuiop.r.r@gmail.com>
-  Copyright (C) 2022 GaryOderNichts <garyodernichts@gmail.com>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -21,40 +19,14 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef SDL_wiiukeyboard_h
+#define SDL_wiiukeyboard_h
+
 #include "../../SDL_internal.h"
+#include "../../events/SDL_events_c.h"
 
-#ifndef SDL_wiiuvideo_h
-#define SDL_wiiuvideo_h
+void SDL_WIIU_PumpKeyboardEvents(_THIS);
+int SDL_WIIU_InitKeyboard(_THIS);
+int SDL_WIIU_QuitKeyboard(_THIS);
 
-#if SDL_VIDEO_DRIVER_WIIU
-
-#include <gx2/surface.h>
-
-typedef struct WIIU_VideoData WIIU_VideoData;
-
-struct WIIU_VideoData
-{
-	// indicate if we're handling procui in SDL's events
-	SDL_bool handleProcUI;
-
-	SDL_bool hasForeground;
-
-	void *commandBufferPool;
-
-	GX2TVRenderMode tvRenderMode;
-	uint32_t tvWidth;
-	uint32_t tvHeight;
-	void *tvScanBuffer;
-	uint32_t tvScanBufferSize;
-
-	GX2DrcRenderMode drcRenderMode;
-	void *drcScanBuffer;
-	uint32_t drcScanBufferSize;
-
-   // did the keyboard code initialize properly?
-   int kbd_init;
-};
-
-#endif /* SDL_VIDEO_DRIVER_WIIU */
-
-#endif /* SDL_wiiuvideo_h */
+#endif /* SDL_wiiukeyboard_h */
