@@ -59,6 +59,30 @@ static void SDL_WIIUKeyboard_KeyCallback(KBDKeyEvent *e)
 	SDL_UnlockMutex(event_buffer_mutex);
 }
 
+static void WIIU_SendKeyEventText(KBDKeyEvent *e)
+{
+	const Uint16 symbol = e->asUTF16Character;
+	unsigned char utf8[4] = {0};
+
+	/* ignore private symbols, used for special keys */
+	if ((symbol >= 0xE000 && symbol <= 0xF8FF) || symbol == 0xFFFF)
+		return;
+
+	/* convert UCS-2 to UTF-8 */
+	if (symbol < 0x80) {
+		utf8[0] = symbol;
+	} else if (symbol < 0x800) {
+		utf8[0] = 0xC0 | (symbol >> 6);
+		utf8[1] = 0x80 | (symbol & 0x3F);
+	} else {
+		utf8[0] = 0xE0 |  (symbol >> 12);
+		utf8[1] = 0x80 | ((symbol >> 6) & 0x3F);
+		utf8[2] = 0x80 |  (symbol & 0x3F);
+	}
+
+	SDL_SendKeyboardText((char *)utf8);
+}
+
 void SDL_WIIU_PumpKeyboardEvents(_THIS)
 {
 	int i;
@@ -72,24 +96,8 @@ void SDL_WIIU_PumpKeyboardEvents(_THIS)
 			(SDL_Scancode)event_buffer.events[i].hidCode
 		);
 
-		if (event_buffer.events[i].isPressedDown) {
-			const Uint16 symbol = event_buffer.events[i].asUTF16Character;
-			unsigned char utf8[4] = {0};
-
-			/* convert UCS-2 to UTF-8 */
-			if (symbol < 0x80) {
-				utf8[0] = symbol;
-			} else if (symbol < 0x800) {
-				utf8[0] = 0xC0 | (symbol >> 6);
-				utf8[1] = 0x80 | (symbol & 0x3F);
-			} else {
-				utf8[0] = 0xE0 |  (symbol >> 12);
-				utf8[1] = 0x80 | ((symbol >> 6) & 0x3F);
-				utf8[2] = 0x80 |  (symbol & 0x3F);
-			}
-
-			SDL_SendKeyboardText((char *)utf8);
-		}
+		if (event_buffer.events[i].isPressedDown)
+			WIIU_SendKeyEventText(&event_buffer.events[i]);
 	}
 
 	/* reset the buffer */
