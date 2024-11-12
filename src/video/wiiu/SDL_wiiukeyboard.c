@@ -109,14 +109,12 @@ void SDL_WIIU_PumpKeyboardEvents(_THIS)
 /* returns non-zero on success */
 int SDL_WIIU_InitKeyboard(_THIS)
 {
-	if (KBDSetup(SDL_WIIUKeyboard_AttachCallback, SDL_WIIUKeyboard_DetachCallback, SDL_WIIUKeyboard_KeyCallback))
+	event_buffer_mutex = SDL_CreateMutex();
+	if (!event_buffer_mutex)
 		return 0;
 
-	event_buffer_mutex = SDL_CreateMutex();
-	if (!event_buffer_mutex) {
-		KBDTeardown();
+	if (KBDSetup(SDL_WIIUKeyboard_AttachCallback, SDL_WIIUKeyboard_DetachCallback, SDL_WIIUKeyboard_KeyCallback))
 		return 0;
-	}
 
 	return 1;
 }
