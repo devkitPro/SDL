@@ -746,6 +746,17 @@ static void OGC_DeleteDevice(SDL_VideoDevice *device)
 	videomutex=0;
 }
 
+/* Weak symbols for the opengx functions used by SDL, so that the client does
+ * not need to link to opengx, unless it actually uses OpenGL. */
+void __attribute__((weak)) ogx_initialize(void)
+{
+}
+
+void __attribute__((weak)) *ogx_get_proc_address(const char *)
+{
+    return NULL;
+}
+
 int SDL_OGC_GL_LoadLibrary(_THIS, const char *path)
 {
 	return 0;
