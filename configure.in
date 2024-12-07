@@ -956,7 +956,7 @@ AC_HELP_STRING([--enable-nintendo-wii], [configure SDL to work with Nintendo Wii
         SDL_LIBS="-mrvl -mcpu=750 -meabi -mhard-float \
                   -L${DEVKITPRO}/portlibs/wii/lib \
                   -L${DEVKITPRO}/portlibs/ppc/lib -lSDLmain $SDL_LIBS $OPENGX_LIBS \
-                  -L${DEVKITPRO}/libogc/lib/wii -laesnd -lwiiuse -lbte -lwiikeyboard -lfat -logc -lm"
+                  -L${DEVKITPRO}/libogc/lib/wii -laesnd -lwiiuse -lbte -lwiikeyboard -lfat -lopengx -logc -lm"
         AC_DEFINE(SDL_TIMER_OGC)
         SOURCES="$SOURCES $srcdir/src/timer/ogc/*.c"
         have_timers=yes
