@@ -61,7 +61,11 @@ static SDL_AudioDevice* cb_this;
 /*  +1, but never goes above NUM_BUFFERS */
 #define next_id(id) (id + 1) % NUM_BUFFERS
 
+<<<<<<< HEAD
 static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
+=======
+static int open_device_thread(_THIS) {
+>>>>>>> 85add52fd2 (wiiu/audio: Open device in new thread)
     AXVoiceOffsets offs;
     AXVoiceVeData vol = {
         .volume = 0x8000,
@@ -241,11 +245,16 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
     return 0;
 }
 
+<<<<<<< HEAD
 static void _WIIUAUDIO_ThreadDeallocator(OSThread *thread, void *stack) {
+=======
+static void thread_deallocator(OSThread* thread, void* stack) {
+>>>>>>> 85add52fd2 (wiiu/audio: Open device in new thread)
    free(thread);
    free(stack);
 }
 
+<<<<<<< HEAD
 static void _WIIUAUDIO_ThreadCleanup(OSThread *thread, void *stack) {
 }
 
@@ -293,6 +302,40 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char *devname) {
         }
     } else {
         result = _WIIUAUDIO_OpenDeviceFunction(this);
+=======
+static void thread_cleanup(OSThread* thread, void* stack) {
+}
+
+static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
+    int result;
+
+    /* AX functions need to run from the same core.
+    Since we cannot easily change the affinity of the currently running thread
+    we simply create a new one which only runs on CPU1 (AX_MAIN_AFFINITY), then join it */
+    OSThread *thread = (OSThread *)memalign(16, sizeof(OSThread));
+    uint32_t stackSize = 32 * 1024;
+    uint8_t *stack = memalign(16, stackSize);
+    int32_t priority = OSGetThreadPriority(OSGetCurrentThread());
+
+    if (!OSCreateThread(thread,
+                        (OSThreadEntryPointFn)open_device_thread,
+                        (int32_t)this,
+                        NULL,
+                        stack + stackSize,
+                        stackSize,
+                        priority,
+                        AX_MAIN_AFFINITY))
+    {
+        return SDL_SetError("OSCreateThread() failed");
+    }
+
+    OSSetThreadDeallocator(thread, &thread_deallocator);
+    OSSetThreadCleanupCallback(thread, &thread_cleanup);
+    OSResumeThread(thread);
+
+    if (!OSJoinThread(thread, &result)) {
+        return SDL_SetError("OSJoinThread() failed");
+>>>>>>> 85add52fd2 (wiiu/audio: Open device in new thread)
     }
 
     return result;
