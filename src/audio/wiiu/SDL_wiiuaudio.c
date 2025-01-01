@@ -61,13 +61,11 @@ static SDL_AudioDevice* cb_this;
 /*  +1, but never goes above NUM_BUFFERS */
 #define next_id(id) (id + 1) % NUM_BUFFERS
 
-static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
-    int ret = 0;
+static int open_device_thread(_THIS) {
     AXVoiceOffsets offs;
     AXVoiceVeData vol = {
         .volume = 0x8000,
     };
-    uint32_t old_affinity;
     float srcratio;
     Uint8* mixbuf = NULL;
     uint32_t mixbuf_allocation_count = 0;
@@ -79,10 +77,6 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
     }
 
     SDL_zerop(this->hidden);
-
-/*  We *must not* change cores when setting stuff up */
-    old_affinity = OSGetThreadAffinity(OSGetCurrentThread());
-    OSSetThreadAffinity(OSGetCurrentThread(), AX_MAIN_AFFINITY);
 
 /*  Take a quick aside to init the wiiu audio */
     if (!AXIsInit()) {
@@ -147,8 +141,7 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
 
     if (!mixbuf) {
         printf("Couldn't allocate mix buffer\n");
-        ret = SDL_OutOfMemory();
-        goto end;
+        return SDL_OutOfMemory();
     }
 
     memset(mixbuf, 0, this->spec.size * NUM_BUFFERS);
@@ -163,8 +156,7 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
     if (this->hidden->deintvbuf == NULL) {
         AXQuit();
         printf("DEBUG: Couldn't allocate deinterleave buffer");
-        ret = SDL_SetError("Couldn't allocate deinterleave buffer");
-        goto end;
+        return SDL_SetError("Couldn't allocate deinterleave buffer");
     }
 
 
@@ -174,8 +166,7 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
         if (!this->hidden->voice[i]) {
             AXQuit();
             printf("DEBUG: couldn't get voice\n");
-            ret = SDL_OutOfMemory();
-            goto end;
+            return SDL_OutOfMemory();
         }
 
     /*  Start messing with it */
@@ -247,10 +238,49 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
     cb_this = this; //wish there was a better way
     AXRegisterAppFrameCallback(_WIIUAUDIO_framecallback);
 
-end: ;
-/*  Put the thread affinity back to normal - we won't call any more AX funcs */
-    OSSetThreadAffinity(OSGetCurrentThread(), old_affinity);
-    return ret;
+    return 0;
+}
+
+static void thread_deallocator(OSThread* thread, void* stack) {
+   free(thread);
+   free(stack);
+}
+
+static void thread_cleanup(OSThread* thread, void* stack) {
+}
+
+static int WIIUAUDIO_OpenDevice(_THIS, const char* devname) {
+    int result;
+
+    /* AX functions need to run from the same core.
+    Since we cannot easily change the affinity of the currently running thread
+    we simply create a new one which only runs on CPU1 (AX_MAIN_AFFINITY), then join it */
+    OSThread *thread = (OSThread *)memalign(16, sizeof(OSThread));
+    uint32_t stackSize = 32 * 1024;
+    uint8_t *stack = memalign(16, stackSize);
+    int32_t priority = OSGetThreadPriority(OSGetCurrentThread());
+
+    if (!OSCreateThread(thread,
+                        (OSThreadEntryPointFn)open_device_thread,
+                        (int32_t)this,
+                        NULL,
+                        stack + stackSize,
+                        stackSize,
+                        priority,
+                        AX_MAIN_AFFINITY))
+    {
+        return SDL_SetError("OSCreateThread() failed");
+    }
+
+    OSSetThreadDeallocator(thread, &thread_deallocator);
+    OSSetThreadCleanupCallback(thread, &thread_cleanup);
+    OSResumeThread(thread);
+
+    if (!OSJoinThread(thread, &result)) {
+        return SDL_SetError("OSJoinThread() failed");
+    }
+
+    return result;
 }
 
 /*  Called every 3ms before a frame of audio is rendered. Keep it fast! */
