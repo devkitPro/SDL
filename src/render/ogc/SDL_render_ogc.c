@@ -427,7 +427,7 @@ static int OGC_RenderSetViewPort(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
 {
     const SDL_Rect *viewport = &cmd->data.viewport.rect;
 
-    OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h);
+    OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h, viewport->w);
     return 0;
 }
 

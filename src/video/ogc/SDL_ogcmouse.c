@@ -29,6 +29,7 @@
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
 #include "SDL_ogcpixels.h"
+#include "SDL_ogcvideo.h"
 
 #include "../SDL_sysvideo.h"
 #include "../../render/SDL_sysrender.h"
@@ -175,7 +176,7 @@ void OGC_draw_cursor(_THIS)
     SDL_Mouse *mouse = SDL_GetMouse();
     OGC_CursorData *curdata;
     Mtx mv;
-    int screen_w, screen_h;
+    int screen_w, screen_h, viewport_w;
     float angle = 0.0f;
 
     if (!mouse || !mouse->cursor_shown ||
@@ -191,7 +192,8 @@ void OGC_draw_cursor(_THIS)
         if (!data->ir.valid) return;
     }
 
-    screen_w = _this->displays[0].current_mode.w;
+    viewport_w = _this->displays[0].current_mode.w;
+    screen_w = ((SDL_VideoData *)_this->displays[0].current_mode.driverdata)->vmode->fbWidth;
     screen_h = _this->displays[0].current_mode.h;
 
     curdata = mouse->cur_cursor->driverdata;
@@ -200,6 +202,7 @@ void OGC_draw_cursor(_THIS)
 
     guMtxIdentity(mv);
     guMtxScaleApply(mv, mv, screen_w / 640.0f, screen_h / 480.0f, 1.0f);
+
     if (angle != 0.0f) {
         Mtx rot;
         guMtxRotDeg(rot, 'z', angle);
@@ -208,7 +211,7 @@ void OGC_draw_cursor(_THIS)
     guMtxTransApply(mv, mv, mouse->x, mouse->y, 0);
     GX_LoadPosMtxImm(mv, GX_PNMTX1);
 
-    OGC_set_viewport(0, 0, screen_w, screen_h);
+    OGC_set_viewport(0, 0, screen_w, screen_h, viewport_w);
 
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
@@ -240,7 +243,8 @@ void OGC_draw_cursor(_THIS)
         SDL_Renderer *renderer = SDL_GetRenderer(_this->windows);
         if (renderer) {
             OGC_set_viewport(renderer->viewport.x, renderer->viewport.y,
-                             renderer->viewport.w, renderer->viewport.h);
+                             renderer->viewport.w, renderer->viewport.h,
+                             renderer->viewport.w);
         }
     }
 }
