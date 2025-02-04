@@ -56,7 +56,7 @@ void OGC_draw_init(int w, int h, int orthoWidth)
 {
     Mtx mv;
 
-    SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "OGC_draw_init called with %d, %d", w, h);
+    SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "OGC_draw_init called with %d, %d, %d", w, h, orthoWidth);
 
     guMtxIdentity(mv);
     /* Ideally we would use 0.5 to center the coordinates on the pixels, but
