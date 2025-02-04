@@ -193,7 +193,7 @@ void OGC_draw_cursor(_THIS)
     }
 
     viewport_w = _this->displays[0].current_mode.w;
-    screen_w = ((SDL_VideoData *)_this->displays[0].current_mode.driverdata)->vmode->fbWidth;
+    screen_w = (viewport_w == 854) ? 640 : _this->displays[0].current_mode.w;
     screen_h = _this->displays[0].current_mode.h;
 
     curdata = mouse->cur_cursor->driverdata;
