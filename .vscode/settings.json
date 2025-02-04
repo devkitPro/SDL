@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "*.wog2": "json",
-        "array": "c",
-        "vector": "c",
-        "xstring": "c",
-        "xutility": "c"
-    }
-}
