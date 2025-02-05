@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.wog2": "json",
+        "xutility": "c"
+    }
+}

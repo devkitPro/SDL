@@ -95,9 +95,11 @@ static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
     SDL_zero(*mode);
     mode->format = SDL_PIXELFORMAT_ARGB8888;
 
-    if (vmode->viWidth == 704)
-        mode->w = ((int)(vmode->fbWidth * 16.0f / 9.0f) + 1);
+    #ifdef __wii__
+    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+        mode->w = ((int)(vmode->fbWidth * 16.0f / 9.0f)) + 1;
     else
+    #endif
         mode->w = vmode->fbWidth;
     mode->h = vmode->efbHeight;
     switch (format) {

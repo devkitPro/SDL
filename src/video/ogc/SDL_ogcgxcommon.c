@@ -54,11 +54,11 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
  * and the image ends up distorted, an example of this is VVVVVV. */
 void OGC_set_viewport(int x, int y, int w, int h, int widthAdjustedForWidescreen)
 {
+    SDL_Log("OGC_set_viewport: %d %d %d %d %d", x, y, w, h, widthAdjustedForWidescreen);
     Mtx44 proj;
 
-    // Since the SDL 
-    GX_SetViewport(x, y, w > 640 ? 640 : w, h, 0, 1);
-    GX_SetScissor(x, y, w > 640 ? 640 : w, h);
+    GX_SetViewport(x, y, (w > 640) ? 640 : w, h, 0, 1);
+    GX_SetScissor(x, y, (w > 640) ? 640 : w, h);
 
     // matrix, t, b, l, r, n, f
     guOrtho(proj, 0, h, 0, widthAdjustedForWidescreen, 0, 1);
