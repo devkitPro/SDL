@@ -212,7 +212,8 @@ void OGC_draw_cursor(_THIS)
 
     #ifdef __wii__
     if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-        OGC_set_viewport(0, 0, screen_w, screen_h, ((int)(screen_h * 16.0f / 9.0f)) + 1);
+        // Calculations to allow the mouse 
+        OGC_set_viewport(0, 0, screen_w > 640 ? 640 : screen_w, screen_h, ((int)(screen_h * 16.0f / 9.0f)) + 1);
     else
     #endif
         OGC_set_viewport(0, 0, screen_w, screen_h, screen_w);
