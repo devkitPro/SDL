@@ -43,7 +43,6 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
 void OGC_set_viewport(int x, int y, int w, int h, int orthoWidth)
 {
     Mtx44 proj;
-    SDL_Log("%d %d %d %d %d", x, y, w, h, orthoWidth);
 
     GX_SetViewport(x, y, w > 640 ? 640 : w, h, 0, 1);
     GX_SetScissor(x, y, w > 640 ? 640 : w, h);
