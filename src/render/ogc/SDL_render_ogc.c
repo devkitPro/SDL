@@ -33,6 +33,7 @@
 #include <ogc/cache.h>
 #include <ogc/gx.h>
 #include <ogc/video.h>
+#include <ogc/conf.h>
 
 #define MAX_EFB_WIDTH 640
 #define MAX_EFB_HEIGHT 528
