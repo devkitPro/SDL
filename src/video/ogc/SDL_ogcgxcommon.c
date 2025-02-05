@@ -51,7 +51,7 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
  * The reason why we can't just check for the active aspect ratio
  * is that if the app is using SDL Renderer with a different logical size
  * from the window, it'd set the viewport to a size, than when we render we set it to another
- * and the image ends up distorted. */
+ * and the image ends up distorted, an example of this is VVVVVV. */
 void OGC_set_viewport(int x, int y, int w, int h, int widthAdjustedForWidescreen)
 {
     Mtx44 proj;
