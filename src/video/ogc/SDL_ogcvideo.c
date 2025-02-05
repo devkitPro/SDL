@@ -38,10 +38,10 @@
 
 #include <malloc.h>
 #include <ogc/color.h>
+#include <ogc/conf.h>
 #include <ogc/gx.h>
 #include <ogc/system.h>
 #include <ogc/video.h>
-#include <ogc/conf.h>
 
 #include <opengx.h>
 
@@ -87,14 +87,18 @@ static const GXRModeObj *s_pal_modes[] = {
 static int OGC_VideoInit(_THIS);
 static void OGC_VideoQuit(_THIS);
 
-static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode, int width)
+static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
 {
     u32 format = VI_FORMAT_FROM_MODE(vmode->viTVMode);
 
     /* Use a fake 32-bpp desktop mode */
     SDL_zero(*mode);
     mode->format = SDL_PIXELFORMAT_ARGB8888;
-    mode->w = width;
+
+    if (vmode->viWidth == 704)
+        mode->w = ((int)(vmode->fbWidth / 16.0f * 9.0f) + 1);
+    else
+        mode->w = vmode->fbWidth;
     mode->h = vmode->efbHeight;
     switch (format) {
     case VI_DEBUG:
@@ -108,7 +112,7 @@ static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode, in
         mode->refresh_rate = 50;
         break;
     }
-    mode->driverdata = (GXRModeObj*)vmode;
+    mode->driverdata = (GXRModeObj *)vmode;
 }
 
 static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
@@ -152,40 +156,36 @@ static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
     // TODO: Currently ony added on wii if it's widescreen,
     // but should work on GC and a 4:3 Wii
     // testing needed
-    
-    #ifdef __wii__
-    if(CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-    {
-    memcpy(&s_mode704, gx_modes[1], sizeof(s_mode704));
-    s_mode704.viWidth = 704;
 
-    // set Center point
-	if (&s_mode704 == &TVPal576IntDfScale || &s_mode704 == &TVPal576ProgScale) 
-	{
-		s_mode704.viXOrigin = (VI_MAX_WIDTH_PAL - s_mode704.viWidth) / 2;
-		s_mode704.viYOrigin = (VI_MAX_HEIGHT_PAL - s_mode704.viHeight) / 2;
-	} 
-	else 
-	{
-		s_mode704.viXOrigin = (VI_MAX_WIDTH_NTSC - s_mode704.viWidth) / 2;
-		s_mode704.viYOrigin = (VI_MAX_HEIGHT_NTSC - s_mode704.viHeight) / 2;
-	}
+#ifdef __wii__
+    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
+        memcpy(&s_mode704, gx_modes[1], sizeof(s_mode704));
+        s_mode704.viWidth = 704;
 
-    // Widescreen is anamorphic, so we provide a different width for the ortho projection
-    init_display_mode(&mode, &s_mode704, 854);
-    SDL_AddDisplayMode(display, &mode);
+        // set Center point
+        if (&s_mode704 == &TVPal576IntDfScale || &s_mode704 == &TVPal576ProgScale) {
+            s_mode704.viXOrigin = (VI_MAX_WIDTH_PAL - s_mode704.viWidth) / 2;
+            s_mode704.viYOrigin = (VI_MAX_HEIGHT_PAL - s_mode704.viHeight) / 2;
+        } else {
+            s_mode704.viXOrigin = (VI_MAX_WIDTH_NTSC - s_mode704.viWidth) / 2;
+            s_mode704.viYOrigin = (VI_MAX_HEIGHT_NTSC - s_mode704.viHeight) / 2;
+        }
+
+        // Widescreen is anamorphic, so we provide a different width for the ortho projection
+        init_display_mode(&mode, &s_mode704);
+        SDL_AddDisplayMode(display, &mode);
     }
-    #endif
+#endif
 
     /* Now add all the "standard" modes from libogc */
     while (*gx_modes) {
-        init_display_mode(&mode, *gx_modes, (*gx_modes)->fbWidth);
+        init_display_mode(&mode, *gx_modes);
         SDL_AddDisplayMode(display, &mode);
         gx_modes++;
     }
 }
 
-static void setup_video_mode(_THIS, GXRModeObj *vmode, int orthoWidth)
+static void setup_video_mode(_THIS, GXRModeObj *vmode, int widthAdjustedForWidescreen)
 {
     SDL_VideoData *videodata = (SDL_VideoData *)_this->driverdata;
 
@@ -202,7 +202,8 @@ static void setup_video_mode(_THIS, GXRModeObj *vmode, int orthoWidth)
     VIDEO_Flush();
 
     VIDEO_WaitVSync();
-    if (vmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
+    if (vmode->viTVMode & VI_NON_INTERLACE)
+        VIDEO_WaitVSync();
 
     /* Setup the EFB -> XFB copy operation */
     GX_SetDispCopySrc(0, 0, vmode->fbWidth, vmode->efbHeight);
@@ -212,7 +213,7 @@ static void setup_video_mode(_THIS, GXRModeObj *vmode, int orthoWidth)
     GX_SetFieldMode(vmode->field_rendering,
                     ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 
-    OGC_draw_init(vmode->fbWidth, vmode->efbHeight, orthoWidth);
+    OGC_draw_init(vmode->fbWidth, vmode->efbHeight, widthAdjustedForWidescreen);
 }
 
 static int OGC_SetDisplayMode(_THIS, SDL_VideoDisplay *display,
@@ -309,29 +310,29 @@ int OGC_VideoInit(_THIS)
     VIDEO_Init();
 
     vmode = VIDEO_GetPreferredMode(NULL);
-    vmode->viWidth = 704;
+#ifdef __wii__
+    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
+        vmode->viWidth = 704;
 
-    // set Center point
-	if (&s_mode704 == &TVPal576IntDfScale || &s_mode704 == &TVPal576ProgScale) 
-	{
-		vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
-		vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
-	} 
-	else 
-	{
-		vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
-		vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
-	}
-
+        // set Center point
+        if (&s_mode704 == &TVPal576IntDfScale || &s_mode704 == &TVPal576ProgScale) {
+            vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
+            vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
+        } else {
+            vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
+            vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
+        }
+    }
+#endif
     videodata->gp_fifo = memalign(32, DEFAULT_FIFO_SIZE);
     memset(videodata->gp_fifo, 0, DEFAULT_FIFO_SIZE);
     GX_Init(videodata->gp_fifo, DEFAULT_FIFO_SIZE);
 
-    #ifdef __wii__
-    if(CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-    setup_video_mode(_this, vmode, 854);
+#ifdef __wii__
+    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+        setup_video_mode(_this, vmode, 854);
     else
-    #endif    
+#endif
     setup_video_mode(_this, vmode, vmode->fbWidth);
     GX_SetCopyClear(background, GX_MAX_Z24);
 
@@ -343,12 +344,7 @@ int OGC_VideoInit(_THIS)
 
     GX_Flush();
 
-    #ifdef __wii__
-    if(CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-    init_display_mode(&mode, vmode, 854);
-    else
-    #endif   
-    init_display_mode(&mode, vmode, vmode->fbWidth);
+    init_display_mode(&mode, vmode);
     if (SDL_AddBasicVideoDisplay(&mode) < 0) {
         return -1;
     }

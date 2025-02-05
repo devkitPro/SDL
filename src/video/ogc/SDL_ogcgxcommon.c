@@ -40,23 +40,37 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
     1.0,
 };
 
-void OGC_set_viewport(int x, int y, int w, int h, int orthoWidth)
+/* On Widescreen if we pass the intended viewport width, the output will be streched
+ * due to the fact the Wii's Widescreen is anamorphic, for this reason, we passs
+ * a width value adjusted for widescreen, so we can modify the ortographic projection
+ * of the viewport to allow the screen size to be displayed properly in widescreen
+ * For example: If an app wants to output at 640x480, 
+ * it will be streched unless the projection is setup for 854x480,
+ * so we pass 854 on widthAdjustedForWidescreen 
+ * 
+ * The reason why we can't just check for the active aspect ratio
+ * is that if the app is using SDL Renderer with a different logical size
+ * from the window, it'd set the viewport to a size, than when we render we set it to another
+ * and the image ends up distorted.
+void OGC_set_viewport(int x, int y, int w, int h, int widthAdjustedForWidescreen)
 {
     Mtx44 proj;
 
+    // Since the SDL 
     GX_SetViewport(x, y, w > 640 ? 640 : w, h, 0, 1);
     GX_SetScissor(x, y, w > 640 ? 640 : w, h);
 
     // matrix, t, b, l, r, n, f
-    guOrtho(proj, 0, h, 0, orthoWidth, 0, 1);
+    guOrtho(proj, 0, h, 0, widthAdjustedForWidescreen, 0, 1);
     GX_LoadProjectionMtx(proj, GX_ORTHOGRAPHIC);
 }
 
-void OGC_draw_init(int w, int h, int orthoWidth)
+// takes in w, h and widthAdjustedForWidescreen to pass to OGC_set_viewport
+void OGC_draw_init(int w, int h, int widthAdjustedForWidescreen)
 {
     Mtx mv;
 
-    SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "OGC_draw_init called with %d, %d, %d", w, h, orthoWidth);
+    SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "OGC_draw_init called with %d, %d, %d", w, h, widthAdjustedForWidescreen);
 
     guMtxIdentity(mv);
     /* Ideally we would use 0.5 to center the coordinates on the pixels, but
@@ -86,7 +100,7 @@ void OGC_draw_init(int w, int h, int orthoWidth)
     GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
     GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
 
-    OGC_set_viewport(0, 0, w, h, orthoWidth);
+    OGC_set_viewport(0, 0, w, h, widthAdjustedForWidescreen);
 
     GX_InvVtxCache(); // update vertex cache
 }
