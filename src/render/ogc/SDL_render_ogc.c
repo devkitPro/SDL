@@ -28,12 +28,12 @@
 #include "../../video/ogc/SDL_ogcgxcommon.h"
 #include "../../video/ogc/SDL_ogcpixels.h"
 #include "../../video/ogc/SDL_ogcvideo.h"
+#include <ogc/conf.h>
 
 #include <malloc.h>
 #include <ogc/cache.h>
 #include <ogc/gx.h>
 #include <ogc/video.h>
-#include <ogc/conf.h>
 
 #define MAX_EFB_WIDTH 640
 #define MAX_EFB_HEIGHT 528
@@ -427,13 +427,6 @@ static int OGC_QueueGeometry(SDL_Renderer *renderer, SDL_RenderCommand *cmd, SDL
 static int OGC_RenderSetViewPort(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
 {
     const SDL_Rect *viewport = &cmd->data.viewport.rect;
-    #ifdef __wii__
-    if(CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-    // Correct the orthographic projection width for widescreen, + 64 is because the viWidth is set to 704
-    // 704 is 64 pixels wider than 640, so we have account for that strech
-    OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h, (viewport->h * 16.0f / 9.0f) + 64);
-    else
-    #endif
     OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h, viewport->w);
     return 0;
 }
