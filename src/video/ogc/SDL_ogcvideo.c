@@ -148,7 +148,7 @@ static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
      * take care of the horizontal scale for us. */
     memcpy(&s_mode320, gx_modes[0], sizeof(s_mode320));
     s_mode320.fbWidth = 320;
-    init_display_mode(&mode, &s_mode320, s_mode320.fbWidth);
+    init_display_mode(&mode, &s_mode320);
     SDL_AddDisplayMode(display, &mode);
 
     // libogc uses 640 for the viWidth, but this does not work well for Widescreen
