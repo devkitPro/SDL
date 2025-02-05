@@ -176,7 +176,7 @@ void OGC_draw_cursor(_THIS)
     SDL_Mouse *mouse = SDL_GetMouse();
     OGC_CursorData *curdata;
     Mtx mv;
-    int screen_w, screen_h;
+    int viewport_w, screen_h, screen_w;
     float angle = 0.0f;
 
     if (!mouse || !mouse->cursor_shown ||
@@ -193,6 +193,7 @@ void OGC_draw_cursor(_THIS)
     }
 
     screen_w = _this->displays[0].current_mode.w;
+    viewport_w = (screen_w == 854) ? 640 : _this->displays[0].current_mode.w;
     screen_h = _this->displays[0].current_mode.h;
 
     curdata = mouse->cur_cursor->driverdata;
@@ -200,7 +201,7 @@ void OGC_draw_cursor(_THIS)
                      SDL_ScaleModeNearest);
 
     guMtxIdentity(mv);
-    guMtxScaleApply(mv, mv, screen_w / 640.0f, screen_h / 480.0f, 1.0f);
+    guMtxScaleApply(mv, mv, viewport_w / 640.0f, screen_h / 480.0f, 1.0f);
 
     if (angle != 0.0f) {
         Mtx rot;
@@ -210,13 +211,7 @@ void OGC_draw_cursor(_THIS)
     guMtxTransApply(mv, mv, mouse->x, mouse->y, 0);
     GX_LoadPosMtxImm(mv, GX_PNMTX1);
 
-    #ifdef __wii__
-    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-        // Calculations to allow the mouse 
-        OGC_set_viewport(0, 0, screen_w > 640 ? 640 : screen_w, screen_h, ((int)(screen_h * 16.0f / 9.0f)) + 1);
-    else
-    #endif
-        OGC_set_viewport(0, 0, screen_w, screen_h, screen_w);
+    OGC_set_viewport(0, 0, viewport_w, screen_h, screen_w);
 
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
