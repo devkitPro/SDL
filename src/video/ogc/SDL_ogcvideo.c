@@ -165,7 +165,7 @@ static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
         s_mode704.viWidth = 704;
 
         // set Center point
-        if (&s_mode704 == &TVPal576IntDfScale || &s_mode704 == &TVPal576ProgScale) {
+        if (VI_FORMAT_FROM_MODE(s_mode704.viTVMode) == VI_PAL) {
             s_mode704.viXOrigin = (VI_MAX_WIDTH_PAL - s_mode704.viWidth) / 2;
             s_mode704.viYOrigin = (VI_MAX_HEIGHT_PAL - s_mode704.viHeight) / 2;
         } else {
