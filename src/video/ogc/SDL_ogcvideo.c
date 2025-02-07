@@ -88,20 +88,22 @@ static void OGC_VideoQuit(_THIS);
 
 static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
 {
+    float aspect_w = 4.0f;
+    float aspect_h = 3.0f;
+    OGC_get_aspect_ratio_dimensions(&aspect_w, &aspect_h);
+
     u32 format = VI_FORMAT_FROM_MODE(vmode->viTVMode);
 
     /* Use a fake 32-bpp desktop mode */
     SDL_zero(*mode);
     mode->format = SDL_PIXELFORMAT_ARGB8888;
 
-    #ifdef __wii__
-    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
-        mode->w = vmode->fbWidth * 16.0f / 9.0f;
-        mode->w = (mode->w + 1) & ~1;
-    }
-    #endif
-    mode->w = vmode->fbWidth;
     mode->h = vmode->efbHeight;
+    if (aspect_w > 4.0f && aspect_h > 3.0f) {
+        mode->w = mode->h * aspect_w / aspect_h;
+        mode->w = (mode->w + 1) & ~1;
+    } else
+        mode->w = vmode->fbWidth;
     switch (format) {
     case VI_DEBUG:
     case VI_NTSC:
