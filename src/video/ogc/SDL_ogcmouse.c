@@ -196,8 +196,14 @@ void OGC_draw_cursor(_THIS)
     screen_h = _this->displays[0].current_mode.h;
 
     curdata = mouse->cur_cursor->driverdata;
-    OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
-                     SDL_ScaleModeNearest);
+    #ifdef __wii__
+    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
+        OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
+                         SDL_ScaleModeLinear);
+    else
+    #endif
+        OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
+                         SDL_ScaleModeNearest);
 
     guMtxIdentity(mv);
 #ifdef __wii__
@@ -215,7 +221,7 @@ void OGC_draw_cursor(_THIS)
     guMtxTransApply(mv, mv, mouse->x, mouse->y, 0);
     GX_LoadPosMtxImm(mv, GX_PNMTX1);
 
-    OGC_set_viewport(0, 0, screen_w, screen_h, screen_w);
+    OGC_set_viewport(0, 0, screen_w, screen_h);
 
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
@@ -247,8 +253,7 @@ void OGC_draw_cursor(_THIS)
         SDL_Renderer *renderer = SDL_GetRenderer(_this->windows);
         if (renderer) {
             OGC_set_viewport(renderer->viewport.x, renderer->viewport.y,
-                             renderer->viewport.w, renderer->viewport.h,
-                             renderer->viewport.w);
+                             renderer->viewport.w, renderer->viewport.h);
         }
     }
 }

@@ -427,14 +427,8 @@ static int OGC_QueueGeometry(SDL_Renderer *renderer, SDL_RenderCommand *cmd, SDL
 static int OGC_RenderSetViewPort(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
 {
     const SDL_Rect *viewport = &cmd->data.viewport.rect;
-    #ifdef __wii__
-    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-        OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h, 
-                         viewport->w==640 ? (viewport->h*16.0f/9.0f)+1 : viewport->w);
-    else
-    #endif
-    OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h, viewport->w);
-    
+
+    OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h);
     return 0;
 }
 

@@ -52,7 +52,6 @@
 
 /* A video mode with a 320 width; we'll build it programmatically. */
 static GXRModeObj s_mode320;
-static GXRModeObj s_mode704;
 
 static const GXRModeObj *s_ntsc_modes[] = {
     &TVNtsc240Ds,
@@ -96,11 +95,12 @@ static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
     mode->format = SDL_PIXELFORMAT_ARGB8888;
 
     #ifdef __wii__
-    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-        mode->w = ((int)(vmode->fbWidth * 16.0f / 9.0f)) + 1;
-    else
+    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
+        mode->w = vmode->fbWidth * 16.0f / 9.0f;
+        mode->w = (mode->w + 1) & ~1;
+    }
     #endif
-        mode->w = vmode->fbWidth;
+    mode->w = vmode->fbWidth;
     mode->h = vmode->efbHeight;
     switch (format) {
     case VI_DEBUG:
@@ -114,7 +114,7 @@ static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
         mode->refresh_rate = 50;
         break;
     }
-    mode->driverdata = (GXRModeObj *)vmode;
+    mode->driverdata = (GXRModeObj*)vmode;
 }
 
 static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
@@ -153,32 +153,6 @@ static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
     init_display_mode(&mode, &s_mode320);
     SDL_AddDisplayMode(display, &mode);
 
-    // libogc uses 640 for the viWidth, but this does not work well for Widescreen
-    // as such we extend the viWidth to 704 on a new videomode
-    // TODO: Currently ony added on wii if it's widescreen,
-    // but should work on GC and a 4:3 Wii
-    // testing needed
-
-#ifdef __wii__
-    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
-        memcpy(&s_mode704, gx_modes[1], sizeof(s_mode704));
-        s_mode704.viWidth = 704;
-
-        // set Center point
-        if (&s_mode704 == &TVPal576IntDfScale || &s_mode704 == &TVPal576ProgScale) {
-            s_mode704.viXOrigin = (VI_MAX_WIDTH_PAL - s_mode704.viWidth) / 2;
-            s_mode704.viYOrigin = (VI_MAX_HEIGHT_PAL - s_mode704.viHeight) / 2;
-        } else {
-            s_mode704.viXOrigin = (VI_MAX_WIDTH_NTSC - s_mode704.viWidth) / 2;
-            s_mode704.viYOrigin = (VI_MAX_HEIGHT_NTSC - s_mode704.viHeight) / 2;
-        }
-
-        // Widescreen is anamorphic, so we provide a different width for the ortho projection
-        init_display_mode(&mode, &s_mode704);
-        SDL_AddDisplayMode(display, &mode);
-    }
-#endif
-
     /* Now add all the "standard" modes from libogc */
     while (*gx_modes) {
         init_display_mode(&mode, *gx_modes);
@@ -187,9 +161,23 @@ static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
     }
 }
 
-static void setup_video_mode(_THIS, GXRModeObj *vmode, int widthAdjustedForWidescreen)
+static void setup_video_mode(_THIS, GXRModeObj *vmode)
 {
     SDL_VideoData *videodata = (SDL_VideoData *)_this->driverdata;
+
+    // TODO: Should I make this only happen if the aspect ratio isn't 4:3?
+    if(vmode->viWidth == 240 || vmode->viWidth == 640)
+        vmode->viWidth = vmode->viWidth + (VI_MAX_WIDTH_NTSC - 640);
+    
+    // set Center point
+    if (VI_FORMAT_FROM_MODE(vmode->viTVMode) == VI_PAL) {
+        vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
+        vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
+    } else {
+        vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
+        vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
+    }
+
 
     VIDEO_SetBlack(true);
     VIDEO_Configure(vmode);
@@ -215,7 +203,7 @@ static void setup_video_mode(_THIS, GXRModeObj *vmode, int widthAdjustedForWides
     GX_SetFieldMode(vmode->field_rendering,
                     ((vmode->viHeight == 2 * vmode->xfbHeight) ? GX_ENABLE : GX_DISABLE));
 
-    OGC_draw_init(vmode->fbWidth, vmode->efbHeight, widthAdjustedForWidescreen);
+    OGC_draw_init(vmode->fbWidth, vmode->efbHeight);
 }
 
 static int OGC_SetDisplayMode(_THIS, SDL_VideoDisplay *display,
@@ -230,7 +218,7 @@ static int OGC_SetDisplayMode(_THIS, SDL_VideoDisplay *display,
     if (videodata->xfb[1])
         free(MEM_K1_TO_K0(videodata->xfb[1]));
 
-    setup_video_mode(_this, vmode, mode->w);
+    setup_video_mode(_this, vmode);
     return 0;
 }
 
@@ -312,30 +300,21 @@ int OGC_VideoInit(_THIS)
     VIDEO_Init();
 
     vmode = VIDEO_GetPreferredMode(NULL);
-#ifdef __wii__
-    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
-        vmode->viWidth = 704;
-
-        // set Center point
-        if (&s_mode704 == &TVPal576IntDfScale || &s_mode704 == &TVPal576ProgScale) {
-            vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
-            vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
-        } else {
-            vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
-            vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
-        }
+    vmode->viWidth = VI_MAX_WIDTH_NTSC; // VI_MAX_WIDTH is the same for all regions
+    // set Center point
+    if (VI_FORMAT_FROM_MODE(vmode->viTVMode) == VI_PAL) {
+        vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
+        vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
+    } else {
+        vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
+        vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
     }
-#endif
+
     videodata->gp_fifo = memalign(32, DEFAULT_FIFO_SIZE);
     memset(videodata->gp_fifo, 0, DEFAULT_FIFO_SIZE);
     GX_Init(videodata->gp_fifo, DEFAULT_FIFO_SIZE);
 
-#ifdef __wii__
-    if (CONF_GetAspectRatio() == CONF_ASPECT_16_9)
-        setup_video_mode(_this, vmode, 854);
-    else
-#endif
-    setup_video_mode(_this, vmode, vmode->fbWidth);
+    setup_video_mode(_this, vmode);
     GX_SetCopyClear(background, GX_MAX_Z24);
 
     GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
