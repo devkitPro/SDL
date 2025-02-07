@@ -28,7 +28,6 @@
 #include "../../video/ogc/SDL_ogcgxcommon.h"
 #include "../../video/ogc/SDL_ogcpixels.h"
 #include "../../video/ogc/SDL_ogcvideo.h"
-#include <ogc/conf.h>
 
 #include <malloc.h>
 #include <ogc/cache.h>
