@@ -88,9 +88,7 @@ static void OGC_VideoQuit(_THIS);
 
 static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
 {
-    float aspect_w = 4.0f;
-    float aspect_h = 3.0f;
-    OGC_get_aspect_ratio_dimensions(&aspect_w, &aspect_h);
+    float aspect = OGC_get_aspect_ratio();
 
     u32 format = VI_FORMAT_FROM_MODE(vmode->viTVMode);
 
@@ -99,8 +97,8 @@ static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
     mode->format = SDL_PIXELFORMAT_ARGB8888;
 
     mode->h = vmode->efbHeight;
-    if (aspect_w > 4.0f && aspect_h > 3.0f) {
-        mode->w = mode->h * aspect_w / aspect_h;
+    if (aspect != 4.0f/3.0f) {
+        mode->w = mode->h * aspect;
         mode->w = (mode->w + 1) & ~1;
     } else
         mode->w = vmode->fbWidth;
@@ -166,20 +164,6 @@ static void add_supported_modes(SDL_VideoDisplay *display, u32 tv_format)
 static void setup_video_mode(_THIS, GXRModeObj *vmode)
 {
     SDL_VideoData *videodata = (SDL_VideoData *)_this->driverdata;
-
-    // TODO: Should I make this only happen if the aspect ratio isn't 4:3?
-    if(vmode->viWidth == 240 || vmode->viWidth == 640)
-        vmode->viWidth = vmode->viWidth + (VI_MAX_WIDTH_NTSC - 640);
-    
-    // set Center point
-    if (VI_FORMAT_FROM_MODE(vmode->viTVMode) == VI_PAL) {
-        vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
-        vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
-    } else {
-        vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
-        vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
-    }
-
 
     VIDEO_SetBlack(true);
     VIDEO_Configure(vmode);

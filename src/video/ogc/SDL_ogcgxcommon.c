@@ -41,24 +41,20 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
     1.0,
 };
 
-bool OGC_get_aspect_ratio_dimensions(float *w, float *h)
+float OGC_get_aspect_ratio()
 {
     const char *ratioString;
-    ratioString = SDL_getenv("SDL_OGC_ASPECT_RATIO");
+    float w, h;
+    ratioString = getenv("SDL_OGC_ASPECT_RATIO");
 
     if(ratioString == NULL) {
     #ifdef __wii__
-        if(CONF_GetAspectRatio() == CONF_ASPECT_16_9) {
-            *w = 16.0f;
-            *h = 9.0f;
-            return true;
-        }
+        if(CONF_GetAspectRatio() == CONF_ASPECT_16_9) 
+            return 16.0f / 9.0f;
     #endif
-        *w = 4.0f;
-        *h = 3.0f;
-        return true;
-    } else if(SDL_sscanf(ratioString, "%f:%f", w, h) == 2) return true;
-    return false;
+        return 4.0f / 3.0f;
+    } else if(sscanf(ratioString, "%f:%f", w, h) == 2) 
+        return w/h;
 }
 
 void OGC_set_viewport(int x, int y, int w, int h)

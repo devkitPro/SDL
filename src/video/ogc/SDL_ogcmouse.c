@@ -179,9 +179,7 @@ void OGC_draw_cursor(_THIS)
     int screen_w, screen_h;
     float angle = 0.0f;
 
-    float aspect_w = 4.0f;
-    float aspect_h = 3.0f;
-    OGC_get_aspect_ratio_dimensions(&aspect_w, &aspect_h);
+    float aspect_ratio = OGC_get_aspect_ratio();
 
     if (!mouse || !mouse->cursor_shown ||
         !mouse->cur_cursor || !mouse->cur_cursor->driverdata) {
@@ -200,7 +198,7 @@ void OGC_draw_cursor(_THIS)
     screen_h = _this->displays[0].current_mode.h;
 
     curdata = mouse->cur_cursor->driverdata;
-    if (aspect_w > 4.0f && aspect_h > 3.0f)
+    if (aspect_ratio != 4.0f/3.0f)
         OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
                          SDL_ScaleModeLinear);
     else
@@ -208,7 +206,7 @@ void OGC_draw_cursor(_THIS)
                          SDL_ScaleModeNearest);
 
     guMtxIdentity(mv);
-    guMtxScaleApply(mv, mv, screen_w / (480.0f * aspect_w / aspect_h), screen_h / 480.0f, 1.0f);
+    guMtxScaleApply(mv, mv, screen_h / 480.0f, screen_h / 480.0f, 1.0f);
 
     if (angle != 0.0f) {
         Mtx rot;
