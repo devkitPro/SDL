@@ -51,8 +51,8 @@ struct WIIU_VideoData
 	void *drcScanBuffer;
 	uint32_t drcScanBufferSize;
 
-   // did the keyboard code initialize properly?
-   int kbd_init;
+	// did the keyboard code initialize properly?
+	int kbd_init;
 };
 
 #endif /* SDL_VIDEO_DRIVER_WIIU */

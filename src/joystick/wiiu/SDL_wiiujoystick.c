@@ -39,6 +39,7 @@
 #include "SDL_events.h"
 
 #include "SDL_wiiujoystick.h"
+#include "../../video/SDL_sysvideo.h"
 
 //index with device_index, get WIIU_DEVICE*
 static int deviceMap[MAX_CONTROLLERS];
@@ -65,6 +66,7 @@ static void WIIU_JoystickUpdate(SDL_Joystick *joystick);
 static void WIIU_JoystickClose(SDL_Joystick *joystick);
 static void WIIU_JoystickQuit(void);
 static SDL_bool WIIU_JoystickGetGamepadMapping(int device_index, SDL_GamepadMapping * out);
+static SDL_Window *WIIU_GetGamepadWindow(void);
 
 static int WIIU_GetDeviceForIndex(int device_index) {
 	return deviceMap[device_index];
@@ -108,6 +110,16 @@ static void WIIU_RemoveDevice(int wiiu_device) {
 			instanceMap[i] = -1;
 		}
 	}
+}
+
+static SDL_Window *WIIU_GetGamepadWindow(void) {
+	// Find first visible window that is not TV-exclusive.
+	SDL_VideoDevice * dev = SDL_GetVideoDevice();
+	for (SDL_Window *win = dev->windows; win; win = win->next) {
+		if ((win->flags & SDL_WINDOW_SHOWN) && !(win->flags & SDL_WINDOW_WIIU_TV_ONLY))
+			return win;
+	}
+	return NULL;
 }
 
 /* Function to scan the system for joysticks.
@@ -465,15 +477,16 @@ static void WIIU_JoystickUpdate(SDL_Joystick *joystick)
 		/* touchscreen */
 		VPADGetTPCalibratedPoint(VPAD_CHAN_0, &tpdata, &vpad.tpNormal);
 		if (tpdata.touched) {
+			SDL_Window *window = WIIU_GetGamepadWindow();
 			if (!last_touched) {
 				/* Send an initial touch */
-				SDL_SendTouch(0, 0, NULL, SDL_TRUE,
+				SDL_SendTouch(0, 0, window, SDL_TRUE,
 						(float) tpdata.x / 1280.0f,
 						(float) tpdata.y / 720.0f, 1);
 			}
 
 			/* Always send the motion */
-			SDL_SendTouchMotion(0, 0, NULL,
+			SDL_SendTouchMotion(0, 0, window,
 					(float) tpdata.x / 1280.0f,
 					(float) tpdata.y / 720.0f, 1);
 
@@ -482,8 +495,9 @@ static void WIIU_JoystickUpdate(SDL_Joystick *joystick)
 			last_touch_y = tpdata.y;
 			last_touched = 1;
 		} else if (last_touched) {
+			SDL_Window *window = WIIU_GetGamepadWindow();
 			/* Finger released from screen */
-			SDL_SendTouch(0, 0, NULL, SDL_FALSE,
+			SDL_SendTouch(0, 0, window, SDL_FALSE,
 					(float) last_touch_x / 1280.0f,
 					(float) last_touch_y / 720.0f, 1);
 			last_touched = 0;
