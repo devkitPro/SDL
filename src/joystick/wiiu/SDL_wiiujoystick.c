@@ -114,7 +114,7 @@ static void WIIU_RemoveDevice(int wiiu_device) {
 
 static SDL_Window *WIIU_GetGamepadWindow(void) {
 	// Find first visible window that is not TV-exclusive.
-	SDL_VideoDevice * dev = SDL_GetVideoDevice();
+	SDL_VideoDevice *dev = SDL_GetVideoDevice();
 	if (!dev)
 		return NULL;
 	for (SDL_Window *win = dev->windows; win; win = win->next) {
