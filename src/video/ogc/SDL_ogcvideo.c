@@ -38,6 +38,7 @@
 
 #include <malloc.h>
 #include <ogc/color.h>
+#include <ogc/conf.h>
 #include <ogc/gx.h>
 #include <ogc/system.h>
 #include <ogc/video.h>
@@ -87,13 +88,20 @@ static void OGC_VideoQuit(_THIS);
 
 static void init_display_mode(SDL_DisplayMode *mode, const GXRModeObj *vmode)
 {
+    float aspect = OGC_get_aspect_ratio();
+
     u32 format = VI_FORMAT_FROM_MODE(vmode->viTVMode);
 
     /* Use a fake 32-bpp desktop mode */
     SDL_zero(*mode);
     mode->format = SDL_PIXELFORMAT_ARGB8888;
-    mode->w = vmode->fbWidth;
+
     mode->h = vmode->efbHeight;
+    if (aspect != 4.0f/3.0f) {
+        mode->w = mode->h * aspect;
+        mode->w = (mode->w + 1) & ~1;
+    } else
+        mode->w = vmode->fbWidth;
     switch (format) {
     case VI_DEBUG:
     case VI_NTSC:
@@ -170,7 +178,8 @@ static void setup_video_mode(_THIS, GXRModeObj *vmode)
     VIDEO_Flush();
 
     VIDEO_WaitVSync();
-    if (vmode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
+    if (vmode->viTVMode & VI_NON_INTERLACE)
+        VIDEO_WaitVSync();
 
     /* Setup the EFB -> XFB copy operation */
     GX_SetDispCopySrc(0, 0, vmode->fbWidth, vmode->efbHeight);
@@ -277,6 +286,15 @@ int OGC_VideoInit(_THIS)
     VIDEO_Init();
 
     vmode = VIDEO_GetPreferredMode(NULL);
+    vmode->viWidth = VI_MAX_WIDTH_NTSC; // VI_MAX_WIDTH is the same for all regions
+    // set Center point
+    if (VI_FORMAT_FROM_MODE(vmode->viTVMode) == VI_PAL) {
+        vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
+        vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
+    } else {
+        vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
+        vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
+    }
 
     videodata->gp_fifo = memalign(32, DEFAULT_FIFO_SIZE);
     memset(videodata->gp_fifo, 0, DEFAULT_FIFO_SIZE);

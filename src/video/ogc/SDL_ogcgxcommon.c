@@ -28,6 +28,7 @@
 #include <ogc/cache.h>
 #include <ogc/gx.h>
 #include <ogc/video.h>
+#include <ogc/conf.h>
 
 static const f32 tex_pos[] __attribute__((aligned(32))) = {
     0.0,
@@ -40,12 +41,28 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
     1.0,
 };
 
+float OGC_get_aspect_ratio()
+{
+    const char *ratioString;
+    float w, h;
+    ratioString = getenv("SDL_OGC_ASPECT_RATIO");
+
+    if(ratioString == NULL) {
+    #ifdef __wii__
+        if(CONF_GetAspectRatio() == CONF_ASPECT_16_9) 
+            return 16.0f / 9.0f;
+    #endif
+        return 4.0f / 3.0f;
+    } else if(sscanf(ratioString, "%f:%f", w, h) == 2) 
+        return w/h;
+}
+
 void OGC_set_viewport(int x, int y, int w, int h)
 {
     Mtx44 proj;
 
-    GX_SetViewport(x, y, w, h, 0, 1);
-    GX_SetScissor(x, y, w, h);
+    GX_SetViewport(x, y, (w > 640) ? 640 : w, h, 0, 1);
+    GX_SetScissor(x, y, (w > 640) ? 640 : w, h);
 
     // matrix, t, b, l, r, n, f
     guOrtho(proj, 0, h, 0, w, 0, 1);

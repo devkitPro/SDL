@@ -29,6 +29,7 @@
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
 #include "SDL_ogcpixels.h"
+#include "SDL_ogcvideo.h"
 
 #include "../SDL_sysvideo.h"
 #include "../../render/SDL_sysrender.h"
@@ -178,6 +179,8 @@ void OGC_draw_cursor(_THIS)
     int screen_w, screen_h;
     float angle = 0.0f;
 
+    float aspect_ratio = OGC_get_aspect_ratio();
+
     if (!mouse || !mouse->cursor_shown ||
         !mouse->cur_cursor || !mouse->cur_cursor->driverdata) {
         return;
@@ -195,11 +198,16 @@ void OGC_draw_cursor(_THIS)
     screen_h = _this->displays[0].current_mode.h;
 
     curdata = mouse->cur_cursor->driverdata;
-    OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
-                     SDL_ScaleModeNearest);
+    if (aspect_ratio != 4.0f/3.0f)
+        OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
+                         SDL_ScaleModeLinear);
+    else
+        OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
+                         SDL_ScaleModeNearest);
 
     guMtxIdentity(mv);
-    guMtxScaleApply(mv, mv, screen_w / 640.0f, screen_h / 480.0f, 1.0f);
+    guMtxScaleApply(mv, mv, screen_h / 480.0f, screen_h / 480.0f, 1.0f);
+
     if (angle != 0.0f) {
         Mtx rot;
         guMtxRotDeg(rot, 'z', angle);

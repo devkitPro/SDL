@@ -30,6 +30,7 @@
 #define GX_COLOR_AS_U32(c) *((u32*)&c)
 
 void OGC_draw_init(int w, int h);
+float OGC_get_aspect_ratio();
 void OGC_set_viewport(int x, int y, int w, int h);
 void OGC_load_texture(void *texels, int w, int h, u8 gx_format,
                       SDL_ScaleMode scale_mode);
