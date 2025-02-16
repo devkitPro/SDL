@@ -345,7 +345,8 @@ void OGC_video_flip(_THIS, bool vsync)
     SDL_VideoData *videodata = _this->driverdata;
     void *xfb = OGC_video_get_xfb(_this);
 
-    if (ogx_prepare_swap_buffers() < 0) return;
+    if (_this->gl_config.driver_loaded &&
+        ogx_prepare_swap_buffers() < 0) return;
 
 #ifdef __wii__
     OGC_draw_cursor(_this);
