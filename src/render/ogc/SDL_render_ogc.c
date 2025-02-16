@@ -301,9 +301,11 @@ static int OGC_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture)
         GX_SetPixelFmt(data->efb_pixel_format, GX_ZC_LINEAR);
     }
 
-    /* Restore the EFB to how it was before the we started to render to a
-     * texture. */
-    if (!texture && data->saved_efb_texture) {
+    if (texture) {
+        load_efb_from_texture(renderer, texture);
+    } else if (data->saved_efb_texture) {
+        /* Restore the EFB to how it was before the we started to render to a
+         * texture. */
         load_efb_from_texture(renderer, data->saved_efb_texture);
         /* Flush the draw operation before destroying the texture */
         GX_DrawDone();
