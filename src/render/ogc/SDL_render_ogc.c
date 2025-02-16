@@ -274,24 +274,24 @@ static int OGC_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture)
     OGC_RenderData *data = renderer->driverdata;
     u8 desired_efb_pixel_format = GX_PF_RGB8_Z24;
 
+    if (data->render_target) {
+        save_efb_to_texture(data->render_target);
+    } else if (data->ops_after_present > 0) {
+        /* Save the current EFB contents if we already drew something onto
+         * it. We'll restore it later, when the rendering target is reset
+         * to NULL (the screen). */
+        data->saved_efb_texture = create_efb_texture(data, texture);
+        save_efb_to_texture(data->saved_efb_texture);
+    }
+
     if (texture) {
         if (texture->w > MAX_EFB_WIDTH || texture->h > MAX_EFB_HEIGHT) {
-            return SDL_SetError("Render target bigger than EFB");
-        }
-
-        if (data->ops_after_present > 0) {
-            /* Save the current EFB contents if we already drew something onto
-             * it. We'll restore it later, when the rendering target is reset
-             * to NULL (the screen). */
-            data->saved_efb_texture = create_efb_texture(data, texture);
-            save_efb_to_texture(data->saved_efb_texture);
+            return SDL_SetError("Render target (%dx%d) bigger than EFB", texture->w, texture->h);
         }
 
         if (SDL_ISPIXELFORMAT_ALPHA(texture->format)) {
             desired_efb_pixel_format = GX_PF_RGBA6_Z24;
         }
-    } else if (data->render_target) {
-        save_efb_to_texture(data->render_target);
     }
 
     data->render_target = texture;
