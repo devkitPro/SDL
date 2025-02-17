@@ -28,6 +28,8 @@
 void OGC_InitMouse(_THIS);
 void OGC_QuitMouse(_THIS);
 void OGC_draw_cursor(_THIS);
+void OGC_restore_viewport(_THIS);
+bool OGC_prep_draw_cursor(_THIS);
 SDL_Cursor *OGC_CreateSystemCursor(SDL_SystemCursor id);
 
 #endif /* SDL_OGC_mouse_h_ */
