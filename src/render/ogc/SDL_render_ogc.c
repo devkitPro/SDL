@@ -460,13 +460,6 @@ static int OGC_RenderClear(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
         cmd->data.color.a
     };
 
-    /* If nothing has been drawn after Present, and if the clear color has not
-     * changed, there's no need to do anything here. */
-    if (data->ops_after_present == 0 &&
-        GX_COLOR_AS_U32(c) == GX_COLOR_AS_U32(data->clear_color)) {
-        return 0;
-    }
-
     data->clear_color = c;
     GX_SetCopyClear(c, GX_MAX_Z24);
     if (renderer->target) {

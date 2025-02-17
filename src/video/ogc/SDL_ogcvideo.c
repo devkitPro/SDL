@@ -351,7 +351,7 @@ void OGC_video_flip(_THIS, bool vsync)
 #ifdef __wii__
     OGC_draw_cursor(_this);
 #endif
-    GX_CopyDisp(xfb, GX_TRUE);
+    GX_CopyDisp(xfb, GX_FALSE);
     GX_DrawDone();
     GX_Flush();
 
