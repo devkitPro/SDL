@@ -205,6 +205,15 @@ static void OGC_ShowWindow(_THIS, SDL_Window *window)
     SDL_SetKeyboardFocus(window);
 }
 
+static int OGC_ShowMessageBox(_THIS, const SDL_MessageBoxData *messageboxdata,
+                              int *buttonid)
+{
+    /* Unimplemented, but at least show the message in the log */
+    SDL_SetError("ShowMessageBox unimplemented: \"%s\", \"%s\"",
+                 messageboxdata->title, messageboxdata->message);
+    return 0;
+}
+
 /* OGC driver bootstrap functions */
 
 static void OGC_DeleteDevice(SDL_VideoDevice *device)
@@ -243,6 +252,7 @@ static SDL_VideoDevice *OGC_CreateDevice(void)
     device->CreateWindowFramebuffer = SDL_OGC_CreateWindowFramebuffer;
     device->UpdateWindowFramebuffer = SDL_OGC_UpdateWindowFramebuffer;
     device->DestroyWindowFramebuffer = SDL_OGC_DestroyWindowFramebuffer;
+    device->ShowMessageBox = OGC_ShowMessageBox;
 
 #ifdef SDL_VIDEO_OPENGL
     device->GL_LoadLibrary = SDL_OGC_GL_LoadLibrary;
