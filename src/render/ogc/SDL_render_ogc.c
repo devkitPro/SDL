@@ -441,9 +441,11 @@ static int OGC_RenderSetClipRect(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
         GX_SetScissor(renderer->viewport.x + rect->x,
                       renderer->viewport.y + rect->y,
                       rect->w, rect->h);
-        GX_SetClipMode(GX_CLIP_ENABLE);
     } else {
-        GX_SetClipMode(GX_CLIP_DISABLE);
+        GX_SetScissor(renderer->viewport.x,
+                      renderer->viewport.y,
+                      renderer->viewport.w,
+                      renderer->viewport.h);
     }
 
     return 0;
