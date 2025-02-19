@@ -40,7 +40,6 @@
 typedef struct
 {
     SDL_BlendMode current_blend_mode;
-    GXColor clear_color;
     int ops_after_present;
     bool vsync;
     u8 efb_pixel_format;
@@ -459,16 +458,35 @@ static int OGC_RenderClear(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
         cmd->data.color.b,
         cmd->data.color.a
     };
+    int16_t x1 = 0;
+    int16_t y1 = 0;
+    int16_t x2 = renderer->window->w;
+    int16_t y2 = renderer->window->h;
+    OGC_set_viewport(0, 0, renderer->window->w, renderer->window->h);
+    OGC_SetBlendMode(renderer, SDL_BLENDMODE_NONE);
 
-    data->clear_color = c;
-    GX_SetCopyClear(c, GX_MAX_Z24);
-    if (renderer->target) {
-        save_efb_to_texture(renderer->target, true);
-    } else {
-        GX_CopyDisp(OGC_video_get_xfb(SDL_GetVideoDevice()), GX_TRUE);
-    }
+    GX_ClearVtxDesc();
+    GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_S16, 0);
+    GX_SetTevColor(GX_TEVREG0, c);
+    GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_C0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO);
+    GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_A0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO);
+    GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GX_SetNumTevStages(1);
+    GX_SetNumChans(0);
+
+    GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+    GX_Position2s16(x1, y1);
+    GX_Position2s16(x2, y1);
+    GX_Position2s16(x2, y2);
+    GX_Position2s16(x1, y2);
+    GX_End();
     data->ops_after_present++;
 
+    /* Restore the viewport */
+    OGC_set_viewport(renderer->viewport.x, renderer->viewport.y,
+                     renderer->viewport.w, renderer->viewport.h);
     return 0;
 }
 
