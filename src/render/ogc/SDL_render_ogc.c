@@ -511,6 +511,7 @@ static int OGC_RenderGeometry(SDL_Renderer *renderer, void *vertices,
         GX_SetNumTevStages(stage - GX_TEVSTAGE0 + 1);
     } else {
         GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+        GX_SetNumTevStages(1);
     }
 
     GX_Begin(GX_TRIANGLES, GX_VTXFMT0, count);
