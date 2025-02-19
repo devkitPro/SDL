@@ -469,6 +469,7 @@ static int OGC_RenderClear(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
     } else {
         GX_CopyDisp(OGC_video_get_xfb(SDL_GetVideoDevice()), GX_TRUE);
     }
+    data->ops_after_present++;
 
     return 0;
 }
