@@ -122,9 +122,10 @@ static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
     GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
     GX_SetNumTexGens(1);
+    GX_SetNumChans(0);
 
     GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
-    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
     GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
     GX_SetNumTevStages(1);
 
@@ -513,6 +514,7 @@ static int OGC_RenderGeometry(SDL_Renderer *renderer, void *vertices,
         GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
         GX_SetNumTevStages(1);
     }
+    GX_SetNumChans(1);
 
     GX_Begin(GX_TRIANGLES, GX_VTXFMT0, count);
     for (int i = 0; i < count; i++) {
