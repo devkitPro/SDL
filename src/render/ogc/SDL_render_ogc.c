@@ -248,8 +248,8 @@ static SDL_Texture *create_efb_texture(OGC_RenderData *data, SDL_Texture *target
     ogc_tex = SDL_calloc(1, sizeof(OGC_TextureData));
     if (!ogc_tex) goto fail_ogc_tex_alloc;
 
-    ogc_tex->format = data->efb_pixel_format == GX_PF_RGB565_Z16 ?
-        GX_TF_RGB565 : GX_TF_RGBA8;
+    ogc_tex->format = data->efb_pixel_format == GX_PF_RGBA6_Z24 ?
+        GX_TF_RGBA8 : GX_TF_RGB565;
     texture->w = target->w;
     texture->h = target->h;
     texture_size = GX_GetTexBufferSize(texture->w, texture->h, ogc_tex->format,
