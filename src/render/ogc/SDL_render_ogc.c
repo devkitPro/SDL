@@ -233,7 +233,7 @@ static void OGC_SetTextureScaleMode(SDL_Renderer *renderer,
      * loading it in OGC_load_texture(). */
 }
 
-static SDL_Texture *create_efb_texture(OGC_RenderData *data, SDL_Texture *target)
+static SDL_Texture *create_efb_texture(OGC_RenderData *data, SDL_Window *window)
 {
     /* Note: we do return a SDL_Texture, but not via SDL's API, since that does
      * a bunch of other stuffs we don't care about. We create this texture for
@@ -250,8 +250,8 @@ static SDL_Texture *create_efb_texture(OGC_RenderData *data, SDL_Texture *target
 
     ogc_tex->format = data->efb_pixel_format == GX_PF_RGBA6_Z24 ?
         GX_TF_RGBA8 : GX_TF_RGB565;
-    texture->w = target->w;
-    texture->h = target->h;
+    texture->w = window->w;
+    texture->h = window->h;
     texture_size = GX_GetTexBufferSize(texture->w, texture->h, ogc_tex->format,
                                        GX_FALSE, 0);
     ogc_tex->texels = memalign(32, texture_size);
@@ -280,7 +280,8 @@ static int OGC_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture)
         /* Save the current EFB contents if we already drew something onto
          * it. We'll restore it later, when the rendering target is reset
          * to NULL (the screen). */
-        data->saved_efb_texture = create_efb_texture(data, texture);
+        if (!data->saved_efb_texture)
+            data->saved_efb_texture = create_efb_texture(data, renderer->window);
         save_efb_to_texture(data->saved_efb_texture);
     }
 
@@ -307,11 +308,7 @@ static int OGC_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture)
         /* Restore the EFB to how it was before the we started to render to a
          * texture. */
         load_efb_from_texture(renderer, data->saved_efb_texture);
-        /* Flush the draw operation before destroying the texture */
-        GX_DrawDone();
-        OGC_DestroyTexture(renderer, data->saved_efb_texture);
-        SDL_free(data->saved_efb_texture);
-        data->saved_efb_texture = NULL;
+        /* We don't free data->saved_efb_texture, it will be reused */
     }
 
     return 0;
@@ -656,6 +653,12 @@ static void OGC_DestroyRenderer(SDL_Renderer *renderer)
     OGC_RenderData *data = renderer->driverdata;
 
     if (data) {
+        GX_DrawDone();
+        if (data->saved_efb_texture) {
+            OGC_DestroyTexture(renderer, data->saved_efb_texture);
+            SDL_free(data->saved_efb_texture);
+        }
+
         SDL_free(data);
     }
 
