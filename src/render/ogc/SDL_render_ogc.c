@@ -112,6 +112,9 @@ static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
     OGC_load_texture(ogc_tex->texels, texture->w, texture->h,
                      ogc_tex->format, SDL_ScaleModeNearest);
 
+    /* The viewport is reset when OGC_SetRenderTarget() returns. */
+    OGC_set_viewport(0, 0, texture->w, texture->h);
+
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_S16, 0);
