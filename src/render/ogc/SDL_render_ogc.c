@@ -107,6 +107,7 @@ static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
 
     OGC_load_texture(ogc_tex->texels, texture->w, texture->h,
                      ogc_tex->format, SDL_ScaleModeNearest);
+    OGC_SetBlendMode(renderer, SDL_BLENDMODE_NONE);
 
     /* The viewport is reset when OGC_SetRenderTarget() returns. */
     OGC_set_viewport(0, 0, texture->w, texture->h);
@@ -137,7 +138,7 @@ static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
     GX_End();
 }
 
-static void save_efb_to_texture(SDL_Texture *texture)
+static void save_efb_to_texture(SDL_Texture *texture, bool must_clear)
 {
     OGC_TextureData *ogc_tex = texture->driverdata;
     u32 texture_size;
@@ -148,7 +149,7 @@ static void save_efb_to_texture(SDL_Texture *texture)
 
     GX_SetTexCopySrc(0, 0, texture->w, texture->h);
     GX_SetTexCopyDst(texture->w, texture->h, ogc_tex->format, GX_FALSE);
-    GX_CopyTex(ogc_tex->texels, GX_TRUE);
+    GX_CopyTex(ogc_tex->texels, must_clear ? GX_TRUE : GX_FALSE);
     GX_PixModeSync();
 }
 
@@ -275,14 +276,14 @@ static int OGC_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture)
     u8 desired_efb_pixel_format = GX_PF_RGB8_Z24;
 
     if (data->render_target) {
-        save_efb_to_texture(data->render_target);
+        save_efb_to_texture(data->render_target, false);
     } else if (data->ops_after_present > 0) {
         /* Save the current EFB contents if we already drew something onto
          * it. We'll restore it later, when the rendering target is reset
          * to NULL (the screen). */
         if (!data->saved_efb_texture)
             data->saved_efb_texture = create_efb_texture(data, renderer->window);
-        save_efb_to_texture(data->saved_efb_texture);
+        save_efb_to_texture(data->saved_efb_texture, false);
     }
 
     if (texture) {
@@ -462,7 +463,7 @@ static int OGC_RenderClear(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
     data->clear_color = c;
     GX_SetCopyClear(c, GX_MAX_Z24);
     if (renderer->target) {
-        save_efb_to_texture(renderer->target);
+        save_efb_to_texture(renderer->target, true);
     } else {
         GX_CopyDisp(OGC_video_get_xfb(SDL_GetVideoDevice()), GX_TRUE);
     }
