@@ -67,8 +67,6 @@ static void OGC_WindowEvent(SDL_Renderer *renderer, const SDL_WindowEvent *event
 
 static void set_blend_mode_real(SDL_Renderer *renderer, SDL_BlendMode blend_mode)
 {
-    OGC_RenderData *data = renderer->driverdata;
-
     switch (blend_mode) {
     case SDL_BLENDMODE_NONE:
         GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
@@ -88,21 +86,19 @@ static void set_blend_mode_real(SDL_Renderer *renderer, SDL_BlendMode blend_mode
     default:
         return;
     }
-
-    data->current_blend_mode = blend_mode;
 }
 
 static inline void OGC_SetBlendMode(SDL_Renderer *renderer, SDL_BlendMode blend_mode)
 {
     OGC_RenderData *data = renderer->driverdata;
 
-    if (data->ops_after_present > 0 &&
-        blend_mode == data->current_blend_mode) {
+    if (blend_mode == data->current_blend_mode) {
         /* Nothing to do */
         return;
     }
 
     set_blend_mode_real(renderer, blend_mode);
+    data->current_blend_mode = blend_mode;
 }
 
 static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
