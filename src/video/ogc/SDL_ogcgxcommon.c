@@ -54,19 +54,7 @@ void OGC_set_viewport(int x, int y, int w, int h)
 
 void OGC_draw_init(int w, int h)
 {
-    Mtx mv;
-
     SDL_LogDebug(SDL_LOG_CATEGORY_VIDEO, "OGC_draw_init called with %d, %d", w, h);
-
-    guMtxIdentity(mv);
-    /* Ideally we would use 0.5 to center the coordinates on the pixels, but
-     * this causes some visual artifacts due to rounding: in the VVVVVV game,
-     * all 8x8 pixel textures lose their rightmost column and bottom row,
-     * except when they are drawn on the bottom-right quadrant of the screen.
-     * Values from 0.1 to 0.4 fix this issue, while preserving pixel accuracy
-     * on drawing operations. */
-    guMtxTransApply(mv, mv, 0.4, 0.4, 0);
-    GX_LoadPosMtxImm(mv, GX_PNMTX0);
 
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);

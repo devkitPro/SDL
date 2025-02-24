@@ -554,6 +554,8 @@ int OGC_RenderPrimitive(SDL_Renderer *renderer, u8 primitive,
     OGC_RenderData *data = renderer->driverdata;
     size_t count = cmd->data.draw.count;
     const SDL_FPoint *verts = (SDL_FPoint *)(vertices + cmd->data.draw.first);
+    Mtx mv;
+    bool did_change_matrix = false;
     GXColor c = {
         cmd->data.draw.r,
         cmd->data.draw.g,
@@ -563,6 +565,14 @@ int OGC_RenderPrimitive(SDL_Renderer *renderer, u8 primitive,
 
     data->ops_after_present++;
     OGC_SetBlendMode(renderer, cmd->data.draw.blend);
+
+    if (primitive == GX_LINESTRIP || primitive == GX_POINTS) {
+        float adjustment = 0.5;
+        guMtxIdentity(mv);
+        guMtxTransApply(mv, mv, adjustment, adjustment, 0);
+        GX_LoadPosMtxImm(mv, GX_PNMTX0);
+        did_change_matrix = true;
+    }
 
     /* TODO: optimize state changes. */
     GX_SetTevColor(GX_TEVREG0, c);
@@ -590,6 +600,11 @@ int OGC_RenderPrimitive(SDL_Renderer *renderer, u8 primitive,
             GX_Position2f32(verts[i].x, verts[i].y);
         }
         GX_End();
+    }
+
+    if (did_change_matrix) {
+        guMtxIdentity(mv);
+        GX_LoadPosMtxImm(mv, GX_PNMTX0);
     }
 
     return 0;
