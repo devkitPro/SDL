@@ -104,6 +104,9 @@ VisualC/visualtest/testsprite2_sample.config
 VisualC/visualtest/testsprite2_sample.parameters
 VisualC-GDK/**/Layout
 
+# for VSCode
+.vscode/
+
 # for Android
 android-project/local.properties
 android-project/.gradle/
