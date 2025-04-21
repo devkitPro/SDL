@@ -426,7 +426,10 @@ static int OGC_RenderSetViewPort(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
 {
     const SDL_Rect *viewport = &cmd->data.viewport.rect;
 
-    OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h);
+    /* If rendering to the screen, pan the viewport to account for the OSK */
+    bool honour_screen_pan = renderer->target == NULL;
+    OGC_set_viewport(viewport->x, viewport->y, viewport->w, viewport->h,
+                     honour_screen_pan);
     return 0;
 }
 
