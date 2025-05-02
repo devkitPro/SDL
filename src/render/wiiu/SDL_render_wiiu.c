@@ -360,8 +360,8 @@ SDL_RenderDriver WIIU_RenderDriver =
 
             SDL_PIXELFORMAT_ARGB2101010,
         },
-        .max_texture_width = 0,
-        .max_texture_height = 0,
+        .max_texture_width = 8192,
+        .max_texture_height = 8192,
     },
 };
 
