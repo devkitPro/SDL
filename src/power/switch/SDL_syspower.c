@@ -19,15 +19,13 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
-#ifndef SDL_POWER_DISABLED
-#if SDL_POWER_SWITCH
+#if !defined(SDL_POWER_DISABLED) && defined(SDL_POWER_SWITCH)
 
-#include "SDL_power.h"
 #include <switch.h>
 
-SDL_bool SDL_GetPowerInfo_SWITCH(SDL_PowerState *state, int *seconds, int *percent)
+bool SDL_GetPowerInfo_SWITCH(SDL_PowerState *state, int *seconds, int *percent)
 {
     PsmChargerType chargerType;
     u32 charge;
@@ -39,7 +37,7 @@ SDL_bool SDL_GetPowerInfo_SWITCH(SDL_PowerState *state, int *seconds, int *perce
         *state = SDL_POWERSTATE_UNKNOWN;
         *seconds = -1;
         *percent = -1;
-        return SDL_FALSE;
+        return false;
     }
 
     psmGetBatteryChargePercentage(&charge);
@@ -58,10 +56,9 @@ SDL_bool SDL_GetPowerInfo_SWITCH(SDL_PowerState *state, int *seconds, int *perce
         *state = SDL_POWERSTATE_CHARGING;
     }
 
-    return SDL_TRUE;
+    return true;
 }
 
-#endif /* SDL_POWER_SWITCH */
-#endif /* SDL_POWER_DISABLED */
+#endif
 
 /* vi: set ts=4 sw=4 expandtab: */

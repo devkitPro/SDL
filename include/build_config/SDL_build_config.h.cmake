@@ -451,6 +451,7 @@
 #cmakedefine SDL_POWER_VITA 1
 #cmakedefine SDL_POWER_PSP 1
 #cmakedefine SDL_POWER_N3DS 1
+#cmakedefine SDL_POWER_SWITCH 1
 
 /* Enable system filesystem support */
 #cmakedefine SDL_FILESYSTEM_ANDROID 1
