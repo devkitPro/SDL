@@ -22,38 +22,36 @@
 
 #if SDL_AUDIO_DRIVER_SWITCH
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <malloc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "SDL_audio.h"
 #include "../SDL_audio_c.h"
 #include "../SDL_audiodev_c.h"
+#include "SDL_audio.h"
 
 #include "SDL_switchaudio.h"
 
-static const AudioRendererConfig arConfig =
-    {
-        .output_rate     = AudioRendererOutputRate_48kHz,
-        .num_voices      = 24,
-        .num_effects     = 0,
-        .num_sinks       = 1,
-        .num_mix_objs    = 1,
-        .num_mix_buffers = 2,
-    };
+static const AudioRendererConfig arConfig = {
+    .output_rate = AudioRendererOutputRate_48kHz,
+    .num_voices = 24,
+    .num_effects = 0,
+    .num_sinks = 1,
+    .num_mix_objs = 1,
+    .num_mix_buffers = 2,
+};
 
-static int
-SWITCHAUDIO_OpenDevice(_THIS, const char *devname)
+static int SWITCHAUDIO_OpenDevice(_THIS, const char *devname)
 {
-    static const u8 sink_channels[] = {0, 1};
+    static const u8 sink_channels[] = { 0, 1 };
     SDL_bool supported_format = SDL_FALSE;
     SDL_AudioFormat test_format;
     Result res;
     u32 size;
     int mpid;
 
-    this->hidden = (struct SDL_PrivateAudioData *) SDL_malloc(sizeof(*this->hidden));
+    this->hidden = (struct SDL_PrivateAudioData *)SDL_malloc(sizeof(*this->hidden));
     if (this->hidden == NULL) {
         return SDL_OutOfMemory();
     }
@@ -75,8 +73,7 @@ SWITCHAUDIO_OpenDevice(_THIS, const char *devname)
     while ((!supported_format) && (test_format)) {
         if (test_format == AUDIO_S16SYS) {
             supported_format = SDL_TRUE;
-        }
-        else {
+        } else {
             test_format = SDL_NextAudioFormat();
         }
     }
@@ -87,7 +84,7 @@ SWITCHAUDIO_OpenDevice(_THIS, const char *devname)
     this->spec.format = test_format;
     SDL_CalculateAudioSpec(&this->spec);
 
-    size = (u32) ((this->spec.size * 2) + 0xfff) & ~0xfff;
+    size = (u32)((this->spec.size * 2) + 0xfff) & ~0xfff;
     this->hidden->pool = memalign(0x1000, size);
     for (int i = 0; i < 2; i++) {
         this->hidden->buffer[i].data_raw = this->hidden->pool;
@@ -112,8 +109,7 @@ SWITCHAUDIO_OpenDevice(_THIS, const char *devname)
     if (this->spec.channels == 1) {
         audrvVoiceSetMixFactor(&this->hidden->driver, 0, 1.0f, 0, 0);
         audrvVoiceSetMixFactor(&this->hidden->driver, 0, 1.0f, 0, 1);
-    }
-    else {
+    } else {
         audrvVoiceSetMixFactor(&this->hidden->driver, 0, 1.0f, 0, 0);
         audrvVoiceSetMixFactor(&this->hidden->driver, 0, 0.0f, 0, 1);
         audrvVoiceSetMixFactor(&this->hidden->driver, 0, 0.0f, 1, 0);
@@ -125,25 +121,22 @@ SWITCHAUDIO_OpenDevice(_THIS, const char *devname)
     return 0;
 }
 
-static void
-SWITCHAUDIO_PlayDevice(_THIS)
+static void SWITCHAUDIO_PlayDevice(_THIS)
 {
     int current = -1;
     for (int i = 0; i < 2; i++) {
-        if (this->hidden->buffer[i].state == AudioDriverWaveBufState_Free
-            || this->hidden->buffer[i].state == AudioDriverWaveBufState_Done) {
+        if (this->hidden->buffer[i].state == AudioDriverWaveBufState_Free || this->hidden->buffer[i].state == AudioDriverWaveBufState_Done) {
             current = i;
             break;
         }
     }
 
     if (current >= 0) {
-        Uint8 *ptr = (Uint8 *) (this->hidden->pool + (current * this->spec.size));
+        Uint8 *ptr = (Uint8 *)(this->hidden->pool + (current * this->spec.size));
         memcpy(ptr, this->hidden->buffer_tmp, this->spec.size);
         armDCacheFlush(ptr, this->spec.size);
         audrvVoiceAddWaveBuf(&this->hidden->driver, 0, &this->hidden->buffer[current]);
-    }
-    else if (!audrvVoiceIsPlaying(&this->hidden->driver, 0)) {
+    } else if (!audrvVoiceIsPlaying(&this->hidden->driver, 0)) {
         audrvVoiceStart(&this->hidden->driver, 0);
     }
 
@@ -154,8 +147,7 @@ SWITCHAUDIO_PlayDevice(_THIS)
             audrvUpdate(&this->hidden->driver);
             audrenWaitFrame();
         }
-    }
-    else {
+    } else {
         current = -1;
         for (int i = 0; i < 2; i++) {
             if (this->hidden->buffer[i].state == AudioDriverWaveBufState_Playing) {
@@ -170,19 +162,16 @@ SWITCHAUDIO_PlayDevice(_THIS)
     }
 }
 
-static void
-SWITCHAUDIO_WaitDevice(_THIS)
+static void SWITCHAUDIO_WaitDevice(_THIS)
 {
 }
 
-static Uint8
-*SWITCHAUDIO_GetDeviceBuf(_THIS)
+static Uint8 *SWITCHAUDIO_GetDeviceBuf(_THIS)
 {
     return this->hidden->buffer_tmp;
 }
 
-static void
-SWITCHAUDIO_CloseDevice(_THIS)
+static void SWITCHAUDIO_CloseDevice(_THIS)
 {
     if (this->hidden->audr_driver) {
         audrvClose(&this->hidden->driver);
@@ -199,14 +188,11 @@ SWITCHAUDIO_CloseDevice(_THIS)
     SDL_free(this->hidden);
 }
 
-static void
-SWITCHAUDIO_ThreadInit(_THIS)
+static void SWITCHAUDIO_ThreadInit(_THIS)
 {
-
 }
 
-static SDL_bool
-SWITCHAUDIO_Init(SDL_AudioDriverImpl *impl)
+static SDL_bool SWITCHAUDIO_Init(SDL_AudioDriverImpl *impl)
 {
     impl->OpenDevice = SWITCHAUDIO_OpenDevice;
     impl->PlayDevice = SWITCHAUDIO_PlayDevice;

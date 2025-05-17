@@ -22,11 +22,11 @@
 #ifndef SDL_switchaudio_h_
 #define SDL_switchaudio_h_
 
-#include <switch.h>
 #include "../SDL_sysaudio.h"
+#include <switch.h>
 
 /* Hidden "this" pointer for the audio functions */
-#define _THIS   SDL_AudioDevice *this
+#define _THIS SDL_AudioDevice *this
 
 struct SDL_PrivateAudioData
 {
