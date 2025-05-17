@@ -19,14 +19,10 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "../../SDL_internal.h"
-
 #if SDL_VIDEO_DRIVER_SWITCH
 
 #include "../../events/SDL_keyboard_c.h"
 #include "../../events/SDL_mouse_c.h"
-#include "../../events/SDL_windowevents_c.h"
-#include "../../render/SDL_sysrender.h"
 #include "../SDL_sysvideo.h"
 
 #include "SDL_switchkeyboard.h"
@@ -40,19 +36,35 @@
 static SDL_Window *switch_window = NULL;
 static AppletOperationMode operationMode;
 
-static void
-SWITCH_Destroy(SDL_VideoDevice *device)
+static bool SWITCH_VideoInit(SDL_VideoDevice *_this);
+static void SWITCH_VideoQuit(SDL_VideoDevice *_this);
+static bool SWITCH_GetDisplayModes(SDL_VideoDevice *_this, SDL_VideoDisplay *display);
+static bool SWITCH_SetDisplayMode(SDL_VideoDevice *_this, SDL_VideoDisplay *display, SDL_DisplayMode *mode);
+static bool SWITCH_CreateWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_PropertiesID create_props);
+static void SWITCH_SetWindowTitle(SDL_VideoDevice *_this, SDL_Window *window);
+static bool SWITCH_SetWindowIcon(SDL_VideoDevice *_this, SDL_Window *window, SDL_Surface *icon);
+static bool SWITCH_SetWindowPosition(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_SetWindowSize(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_ShowWindow(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_HideWindow(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_RaiseWindow(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_MaximizeWindow(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_MinimizeWindow(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_RestoreWindow(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window);
+static void SWITCH_PumpEvents(SDL_VideoDevice *_this);
+
+static void SWITCH_Destroy(SDL_VideoDevice *device)
 {
     if (device != NULL) {
-        if (device->driverdata != NULL) {
-            SDL_free(device->driverdata);
+        if (device->internal != NULL) {
+            SDL_free(device->internal);
         }
         SDL_free(device);
     }
 }
 
-static SDL_VideoDevice *
-SWITCH_CreateDevice()
+static SDL_VideoDevice *SWITCH_CreateDevice()
 {
     SDL_VideoDevice *device;
 
@@ -75,7 +87,6 @@ SWITCH_CreateDevice()
     device->GetDisplayModes = SWITCH_GetDisplayModes;
     device->SetDisplayMode = SWITCH_SetDisplayMode;
     device->CreateSDLWindow = SWITCH_CreateWindow;
-    device->CreateSDLWindowFrom = SWITCH_CreateWindowFrom;
     device->SetWindowTitle = SWITCH_SetWindowTitle;
     device->SetWindowIcon = SWITCH_SetWindowIcon;
     device->SetWindowPosition = SWITCH_SetWindowPosition;
@@ -86,8 +97,6 @@ SWITCH_CreateDevice()
     device->MaximizeWindow = SWITCH_MaximizeWindow;
     device->MinimizeWindow = SWITCH_MinimizeWindow;
     device->RestoreWindow = SWITCH_RestoreWindow;
-    // device->SetWindowMouseGrab = SWITCH_SetWindowGrab; // SDL 2.0.16
-    // device->SetWindowKeyboardGrab = SWITCH_SetWindowGrab; // SDL 2.0.16
     device->DestroyWindow = SWITCH_DestroyWindow;
 
     device->GL_LoadLibrary = SWITCH_GLES_LoadLibrary;
@@ -98,7 +107,7 @@ SWITCH_CreateDevice()
     device->GL_SetSwapInterval = SWITCH_GLES_SetSwapInterval;
     device->GL_GetSwapInterval = SWITCH_GLES_GetSwapInterval;
     device->GL_SwapWindow = SWITCH_GLES_SwapWindow;
-    device->GL_DeleteContext = SWITCH_GLES_DeleteContext;
+    device->GL_DestroyContext = SWITCH_GLES_DestroyContext;
     device->GL_DefaultProfileConfig = SWITCH_GLES_DefaultProfileConfig;
 
     device->StartTextInput = SWITCH_StartTextInput;
@@ -112,18 +121,19 @@ SWITCH_CreateDevice()
 }
 
 VideoBootStrap SWITCH_bootstrap = {
-    "Switch",
-    "Nintendo Switch Video Driver",
-    SWITCH_CreateDevice
+    .name = "Switch",
+    .desc = "Nintendo Switch Video Driver",
+    .create = SWITCH_CreateDevice
 };
 
 /*****************************************************************************/
 /* SDL Video and Display initialization/handling functions                   */
 /*****************************************************************************/
-int SWITCH_VideoInit(_THIS)
+bool SWITCH_VideoInit(SDL_VideoDevice *_this)
 {
-    SDL_VideoDisplay display;
     SDL_DisplayMode current_mode;
+
+    (void)_this;
 
     SDL_zero(current_mode);
 
@@ -135,15 +145,12 @@ int SWITCH_VideoInit(_THIS)
         current_mode.h = 1080;
     }
 
-    current_mode.refresh_rate = 60;
+    current_mode.refresh_rate = 60.0f;
     current_mode.format = SDL_PIXELFORMAT_RGBA8888;
-    current_mode.driverdata = NULL;
 
-    SDL_zero(display);
-    display.desktop_mode = current_mode;
-    display.current_mode = current_mode;
-    display.driverdata = NULL;
-    SDL_AddVideoDisplay(&display, SDL_FALSE);
+    if (SDL_AddBasicVideoDisplay(&current_mode) == 0) {
+        return false;
+    }
 
     // init psm service
     psmInitialize();
@@ -156,10 +163,10 @@ int SWITCH_VideoInit(_THIS)
     // init software keyboard
     SWITCH_InitSwkb();
 
-    return 0;
+    return true;
 }
 
-void SWITCH_VideoQuit(_THIS)
+void SWITCH_VideoQuit(SDL_VideoDevice *_this)
 {
     // this should not be needed if user code is right (SDL_GL_LoadLibrary/SDL_GL_UnloadLibrary calls match)
     // this (user) error doesn't have the same effect on switch thought, as the driver needs to be unloaded (crash)
@@ -180,9 +187,11 @@ void SWITCH_VideoQuit(_THIS)
     psmExit();
 }
 
-void SWITCH_GetDisplayModes(_THIS, SDL_VideoDisplay *display)
+static bool SWITCH_GetDisplayModes(SDL_VideoDevice *_this, SDL_VideoDisplay *display)
 {
     SDL_DisplayMode mode;
+
+    (void)_this;
 
     SDL_zero(mode);
     mode.refresh_rate = 60;
@@ -191,17 +200,24 @@ void SWITCH_GetDisplayModes(_THIS, SDL_VideoDisplay *display)
     // 1280x720 RGBA8888
     mode.w = 1280;
     mode.h = 720;
-    SDL_AddDisplayMode(display, &mode);
+    SDL_AddFullscreenDisplayMode(display, &mode);
 
     // 1920x1080 RGBA8888
     mode.w = 1920;
     mode.h = 1080;
-    SDL_AddDisplayMode(display, &mode);
+    SDL_AddFullscreenDisplayMode(display, &mode);
+    return true;
 }
 
-int SWITCH_SetDisplayMode(_THIS, SDL_VideoDisplay *display, SDL_DisplayMode *mode)
+bool SWITCH_SetDisplayMode(SDL_VideoDevice *_this, SDL_VideoDisplay *display, SDL_DisplayMode *mode)
 {
-    SDL_WindowData *data = (SDL_WindowData *)SDL_GetFocusWindow()->driverdata;
+    (void)display;
+
+    if (switch_window == NULL) {
+        return true;
+    }
+
+    SDL_WindowData *data = (SDL_WindowData *)switch_window->internal;
     SDL_GLContext ctx = SDL_GL_GetCurrentContext();
     NWindow *nWindow = nwindowGetDefault();
 
@@ -209,14 +225,14 @@ int SWITCH_SetDisplayMode(_THIS, SDL_VideoDisplay *display, SDL_DisplayMode *mod
         SDL_EGL_MakeCurrent(_this, NULL, NULL);
         SDL_EGL_DestroySurface(_this, data->egl_surface);
         nwindowSetDimensions(nWindow, mode->w, mode->h);
-        data->egl_surface = SDL_EGL_CreateSurface(_this, nWindow);
+        data->egl_surface = SDL_EGL_CreateSurface(_this, switch_window, nWindow);
         SDL_EGL_MakeCurrent(_this, data->egl_surface, ctx);
     }
 
-    return 0;
+    return true;
 }
 
-int SWITCH_CreateWindow(_THIS, SDL_Window *window)
+static bool SWITCH_CreateWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_PropertiesID create_props)
 {
     Result rc;
     SDL_WindowData *window_data = NULL;
@@ -242,13 +258,13 @@ int SWITCH_CreateWindow(_THIS, SDL_Window *window)
         return SDL_SetError("Could not set NWindow dimensions: 0x%x", rc);
     }
 
-    window_data->egl_surface = SDL_EGL_CreateSurface(_this, nWindow);
+    window_data->egl_surface = SDL_EGL_CreateSurface(_this, window, nWindow);
     if (window_data->egl_surface == EGL_NO_SURFACE) {
         return SDL_SetError("Could not create GLES window surface");
     }
 
     /* Setup driver data for this window */
-    window->driverdata = window_data;
+    window->internal = window_data;
     switch_window = window;
 
     /* starting operation mode */
@@ -259,12 +275,12 @@ int SWITCH_CreateWindow(_THIS, SDL_Window *window)
     SDL_SetKeyboardFocus(window);
 
     /* Window has been successfully created */
-    return 0;
+    return true;
 }
 
-void SWITCH_DestroyWindow(_THIS, SDL_Window *window)
+static void SWITCH_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window)
 {
-    SDL_WindowData *data = (SDL_WindowData *)window->driverdata;
+    SDL_WindowData *data = (SDL_WindowData *)window->internal;
 
     if (window == switch_window) {
         if (data != NULL) {
@@ -272,32 +288,32 @@ void SWITCH_DestroyWindow(_THIS, SDL_Window *window)
                 SDL_EGL_MakeCurrent(_this, NULL, NULL);
                 SDL_EGL_DestroySurface(_this, data->egl_surface);
             }
-            if (window->driverdata != NULL) {
-                SDL_free(window->driverdata);
-                window->driverdata = NULL;
-            }
+
+            SDL_free(window->internal);
+            window->internal = NULL;
         }
         switch_window = NULL;
     }
 }
 
-int SWITCH_CreateWindowFrom(_THIS, SDL_Window *window, const void *data)
-{
-    return -1;
-}
-void SWITCH_SetWindowTitle(_THIS, SDL_Window *window)
+static void SWITCH_SetWindowTitle(SDL_VideoDevice *_this, SDL_Window *window)
 {
 }
-void SWITCH_SetWindowIcon(_THIS, SDL_Window *window, SDL_Surface *icon)
+
+static bool SWITCH_SetWindowIcon(SDL_VideoDevice *_this, SDL_Window *window, SDL_Surface *icon)
 {
+    return true;
 }
-void SWITCH_SetWindowPosition(_THIS, SDL_Window *window)
+
+static bool SWITCH_SetWindowPosition(SDL_VideoDevice *_this, SDL_Window *window)
 {
+    return true;
 }
-void SWITCH_SetWindowSize(_THIS, SDL_Window *window)
+
+static void SWITCH_SetWindowSize(SDL_VideoDevice *_this, SDL_Window *window)
 {
     u32 w = 0, h = 0;
-    SDL_WindowData *data = (SDL_WindowData *)window->driverdata;
+    SDL_WindowData *data = (SDL_WindowData *)window->internal;
     SDL_GLContext ctx = SDL_GL_GetCurrentContext();
     NWindow *nWindow = nwindowGetDefault();
 
@@ -306,51 +322,55 @@ void SWITCH_SetWindowSize(_THIS, SDL_Window *window)
             SDL_EGL_MakeCurrent(_this, NULL, NULL);
             SDL_EGL_DestroySurface(_this, data->egl_surface);
             nwindowSetDimensions(nWindow, window->w, window->h);
-            data->egl_surface = SDL_EGL_CreateSurface(_this, nWindow);
+            data->egl_surface = SDL_EGL_CreateSurface(_this, window, nWindow);
             SDL_EGL_MakeCurrent(_this, data->egl_surface, ctx);
         }
     }
 }
-void SWITCH_ShowWindow(_THIS, SDL_Window *window)
-{
-}
-void SWITCH_HideWindow(_THIS, SDL_Window *window)
-{
-}
-void SWITCH_RaiseWindow(_THIS, SDL_Window *window)
-{
-}
-void SWITCH_MaximizeWindow(_THIS, SDL_Window *window)
-{
-}
-void SWITCH_MinimizeWindow(_THIS, SDL_Window *window)
-{
-}
-void SWITCH_RestoreWindow(_THIS, SDL_Window *window)
-{
-}
-void SWITCH_SetWindowGrab(_THIS, SDL_Window *window, SDL_bool grabbed)
+
+static void SWITCH_ShowWindow(SDL_VideoDevice *_this, SDL_Window *window)
 {
 }
 
-void SWITCH_PumpEvents(_THIS)
+static void SWITCH_HideWindow(SDL_VideoDevice *_this, SDL_Window *window)
+{
+}
+
+static void SWITCH_RaiseWindow(SDL_VideoDevice *_this, SDL_Window *window)
+{
+}
+
+static void SWITCH_MaximizeWindow(SDL_VideoDevice *_this, SDL_Window *window)
+{
+}
+
+static void SWITCH_MinimizeWindow(SDL_VideoDevice *_this, SDL_Window *window)
+{
+}
+
+static void SWITCH_RestoreWindow(SDL_VideoDevice *_this, SDL_Window *window)
+{
+}
+
+static void SWITCH_PumpEvents(SDL_VideoDevice *_this)
 {
     AppletOperationMode om;
+    Uint64 timestamp = SDL_GetTicksNS();
 
     if (!appletMainLoop()) {
         SDL_Event ev;
-        ev.type = SDL_QUIT;
+        ev.type = SDL_EVENT_QUIT;
         SDL_PushEvent(&ev);
         return;
     }
 
     // we don't want other inputs overlapping with software keyboard
-    if (!SDL_IsTextInputActive()) {
-        SWITCH_PollTouch();
-        SWITCH_PollKeyboard();
-        SWITCH_PollMouse();
+    if (!SDL_TextInputActive(switch_window)) {
+        SWITCH_PollTouch(timestamp);
+        SWITCH_PollKeyboard(timestamp);
+        SWITCH_PollMouse(timestamp);
     }
-    SWITCH_PollSwkb();
+    SWITCH_PollSwkb(timestamp);
 
     // handle docked / un-docked modes
     // note that SDL_WINDOW_RESIZABLE is only possible in windowed mode,

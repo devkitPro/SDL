@@ -2,7 +2,7 @@
 // Created by cpasjuste on 22/04/2020.
 //
 
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
 #if SDL_VIDEO_DRIVER_SWITCH
 
@@ -11,25 +11,26 @@
 
 static SwkbdInline kbd;
 static SwkbdAppearArg kbdAppearArg;
-static bool kbdInited = SDL_FALSE;
-static bool kbdShown = SDL_FALSE;
+static bool kbdInited = false;
+static bool kbdShown = false;
+static SDL_Window *current_window = NULL;
 
-void SWITCH_InitSwkb()
+void SWITCH_InitSwkb(void)
 {
 }
 
-void SWITCH_PollSwkb(void)
+void SWITCH_PollSwkb(Uint64 timestamp)
 {
     if (kbdInited) {
         if (kbdShown) {
             swkbdInlineUpdate(&kbd, NULL);
-        } else if (SDL_IsTextInputActive()) {
-            SDL_StopTextInput();
+        } else if (current_window != NULL && SDL_TextInputActive(current_window)) {
+            SDL_StopTextInput(current_window);
         }
     }
 }
 
-void SWITCH_QuitSwkb()
+void SWITCH_QuitSwkb(void)
 {
     if (kbdInited) {
         swkbdInlineClose(&kbd);
@@ -37,12 +38,12 @@ void SWITCH_QuitSwkb()
     }
 }
 
-SDL_bool SWITCH_HasScreenKeyboardSupport(_THIS)
+bool SWITCH_HasScreenKeyboardSupport(SDL_VideoDevice *_this)
 {
-    return SDL_TRUE;
+    return true;
 }
 
-SDL_bool SWITCH_IsScreenKeyboardShown(_THIS, SDL_Window *window)
+bool SWITCH_IsScreenKeyboardShown(SDL_VideoDevice *_this, SDL_Window *window)
 {
     return kbdShown;
 }
@@ -58,10 +59,12 @@ static void SWITCH_EnterCb(const char *str, SwkbdDecidedEnterArg *arg)
 
 static void SWITCH_CancelCb(void)
 {
-    SDL_StopTextInput();
+    if (current_window != NULL) {
+        SDL_StopTextInput(current_window);
+    }
 }
 
-void SWITCH_StartTextInput(_THIS)
+bool SWITCH_StartTextInput(SDL_VideoDevice *_this, SDL_Window *window, SDL_PropertiesID props)
 {
     Result rc;
 
@@ -70,6 +73,7 @@ void SWITCH_StartTextInput(_THIS)
         if (R_SUCCEEDED(rc)) {
             rc = swkbdInlineLaunchForLibraryApplet(&kbd, SwkbdInlineMode_AppletDisplay, 0);
             if (R_SUCCEEDED(rc)) {
+                current_window = window;
                 swkbdInlineSetDecidedEnterCallback(&kbd, SWITCH_EnterCb);
                 swkbdInlineSetDecidedCancelCallback(&kbd, SWITCH_CancelCb);
                 swkbdInlineMakeAppearArg(&kbdAppearArg, SwkbdType_Normal);
@@ -88,15 +92,20 @@ void SWITCH_StartTextInput(_THIS)
         swkbdInlineAppear(&kbd, &kbdAppearArg);
         kbdShown = true;
     }
+
+    return true;
 }
 
-void SWITCH_StopTextInput(_THIS)
+bool SWITCH_StopTextInput(SDL_VideoDevice *_this, SDL_Window *window)
 {
     if (kbdInited) {
         swkbdInlineDisappear(&kbd);
     }
 
     kbdShown = false;
+    current_window = NULL;
+
+    return true;
 }
 
 #endif

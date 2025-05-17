@@ -22,11 +22,11 @@
 #ifndef _SDL_switchmouse_h
 #define _SDL_switchmouse_h
 
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
 /* mouse functions */
 extern void SWITCH_InitMouse(void);
-extern void SWITCH_PollMouse(void);
+extern void SWITCH_PollMouse(Uint64 timestamp);
 extern void SWITCH_QuitMouse(void);
 
 #endif /* _SDL_switchmouse_h */

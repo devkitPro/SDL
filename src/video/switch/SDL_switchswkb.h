@@ -7,14 +7,14 @@
 
 #include "../../events/SDL_events_c.h"
 
-extern void SWITCH_InitSwkb();
-extern void SWITCH_PollSwkb();
-extern void SWITCH_QuitSwkb();
+extern void SWITCH_InitSwkb(void);
+extern void SWITCH_PollSwkb(Uint64 timestamp);
+extern void SWITCH_QuitSwkb(void);
 
-extern SDL_bool SWITCH_HasScreenKeyboardSupport(_THIS);
-extern SDL_bool SWITCH_IsScreenKeyboardShown(_THIS, SDL_Window * window);
+extern bool SWITCH_HasScreenKeyboardSupport(SDL_VideoDevice *_this);
+extern bool SWITCH_IsScreenKeyboardShown(SDL_VideoDevice *_this, SDL_Window *window);
 
-extern void SWITCH_StartTextInput(_THIS);
-extern void SWITCH_StopTextInput(_THIS);
+extern bool SWITCH_StartTextInput(SDL_VideoDevice *_this, SDL_Window *window, SDL_PropertiesID props);
+extern bool SWITCH_StopTextInput(SDL_VideoDevice *_this, SDL_Window *window);
 
-#endif //SDL2_SDL_SWITCHSWKB_H
+#endif // SDL2_SDL_SWITCHSWKB_H

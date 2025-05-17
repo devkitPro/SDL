@@ -18,33 +18,34 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-
-#include "../../SDL_internal.h"
-#include "SDL_log.h"
+#include "../../SDL_log_c.h"
 
 #if SDL_VIDEO_DRIVER_SWITCH
 
 #include "SDL_switchopengles.h"
 #include "SDL_switchvideo.h"
-#include "SDL_video.h"
 
 /* EGL implementation of SDL OpenGL support */
 
-void SWITCH_GLES_DefaultProfileConfig(_THIS, int *mask, int *major, int *minor)
+void SWITCH_GLES_DefaultProfileConfig(SDL_VideoDevice *_this, int *mask, int *major, int *minor)
 {
+    (void)_this;
+
     *mask = SDL_GL_CONTEXT_PROFILE_ES;
     *major = 2;
     *minor = 0;
 }
 
-int SWITCH_GLES_LoadLibrary(_THIS, const char *path)
+bool SWITCH_GLES_LoadLibrary(SDL_VideoDevice *_this, const char *path)
 {
     return SDL_EGL_LoadLibrary(_this, path, EGL_DEFAULT_DISPLAY, 0);
 }
 
+// clang-format off
 SDL_EGL_CreateContext_impl(SWITCH)
-    SDL_EGL_MakeCurrent_impl(SWITCH)
-        SDL_EGL_SwapWindow_impl(SWITCH)
+SDL_EGL_MakeCurrent_impl(SWITCH)
+SDL_EGL_SwapWindow_impl(SWITCH)
+// clang-format on
 
 #endif /* SDL_VIDEO_DRIVER_SWITCH */
 

@@ -18,31 +18,29 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "../../SDL_internal.h"
-
 #if SDL_VIDEO_DRIVER_SWITCH
 
 #include <switch.h>
 
 #include "../../events/SDL_keyboard_c.h"
-#include "SDL_events.h"
-#include "SDL_log.h"
 #include "SDL_switchkeyboard.h"
 #include "SDL_switchvideo.h"
 
-static bool keys[SDL_NUM_SCANCODES] = { 0 };
+static bool keys[SDL_SCANCODE_COUNT] = { 0 };
+static SDL_KeyboardID keyboard_id = 1;
 
 void SWITCH_InitKeyboard(void)
 {
     hidInitializeKeyboard();
+    SDL_AddKeyboard(keyboard_id, NULL, false);
 }
 
-void SWITCH_PollKeyboard(void)
+void SWITCH_PollKeyboard(Uint64 timestamp)
 {
     HidKeyboardState state;
     SDL_Scancode scancode;
 
-    if (SDL_GetFocusWindow() == NULL) {
+    if (SDL_GetKeyboardFocus() == NULL) {
         return;
     }
 
@@ -50,18 +48,18 @@ void SWITCH_PollKeyboard(void)
         for (scancode = SDL_SCANCODE_UNKNOWN; scancode < (SDL_Scancode)HidKeyboardKey_RightGui; scancode++) {
             bool pressed = hidKeyboardStateGetKey(&state, (int)scancode);
             if (pressed && !keys[scancode]) {
-                SDL_SendKeyboardKey(pressed, scancode);
                 keys[scancode] = true;
             } else if (!pressed && keys[scancode]) {
-                SDL_SendKeyboardKey(pressed, scancode);
                 keys[scancode] = false;
             }
+            SDL_SendKeyboardKey(timestamp, keyboard_id, pressed, scancode, keys[scancode]);
         }
     }
 }
 
 void SWITCH_QuitKeyboard(void)
 {
+    SDL_RemoveKeyboard(keyboard_id, false);
 }
 
 #endif /* SDL_VIDEO_DRIVER_SWITCH */

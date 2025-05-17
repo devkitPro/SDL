@@ -22,12 +22,12 @@
 #ifndef _SDL_switchtouch_h
 #define _SDL_switchtouch_h
 
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
 /* Touch functions */
 extern void SWITCH_InitTouch(void);
 extern void SWITCH_QuitTouch(void);
-extern void SWITCH_PollTouch(void);
+extern void SWITCH_PollTouch(Uint64 timestamp);
 
 #endif /* _SDL_switchtouch_h */
 

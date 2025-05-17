@@ -2927,6 +2927,22 @@ elseif(N3DS)
 elseif(NINTENDO_SWITCH)
   sdl_link_dependency(nx LIBS nx)
 
+  if(SDL_VIDEO)
+    set(SDL_VIDEO_DRIVER_SWITCH 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/video/switch/*.c")
+    set(HAVE_SDL_VIDEO TRUE)
+
+    CheckEGL()
+    if(HAVE_OPENGL_EGL)
+      sdl_link_dependency(opengl LIBS EGL glapi drm_nouveau)
+    endif()
+
+    CheckOpenGLES()
+    CheckOpenGL()
+
+    sdl_compile_options(PRIVATE -DSDL_VIDEO_STATIC_ANGLE)
+  endif()
+
   CheckPTHREAD()
 
   if(SDL_CLOCK_GETTIME)

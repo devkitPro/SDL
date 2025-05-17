@@ -18,45 +18,23 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+#include "SDL_internal.h"
 
-#ifndef __SDL_SWITCHVIDEO_H__
-#define __SDL_SWITCHVIDEO_H__
+#ifndef SDL_switchvideo_h_
+#define SDL_switchvideo_h_
 
 #if SDL_VIDEO_DRIVER_SWITCH
 
 #include <switch.h>
 
-#include "../../SDL_internal.h"
-#include "../SDL_sysvideo.h"
-
-#include "SDL_egl.h"
+#include "../SDL_egl_c.h"
 
 typedef struct SDL_WindowData
 {
     EGLSurface egl_surface;
 } SDL_WindowData;
 
-int SWITCH_VideoInit(_THIS);
-void SWITCH_VideoQuit(_THIS);
-void SWITCH_GetDisplayModes(_THIS, SDL_VideoDisplay *display);
-int SWITCH_SetDisplayMode(_THIS, SDL_VideoDisplay *display, SDL_DisplayMode *mode);
-int SWITCH_CreateWindow(_THIS, SDL_Window *window);
-int SWITCH_CreateWindowFrom(_THIS, SDL_Window *window, const void *data);
-void SWITCH_SetWindowTitle(_THIS, SDL_Window *window);
-void SWITCH_SetWindowIcon(_THIS, SDL_Window *window, SDL_Surface *icon);
-void SWITCH_SetWindowPosition(_THIS, SDL_Window *window);
-void SWITCH_SetWindowSize(_THIS, SDL_Window *window);
-void SWITCH_ShowWindow(_THIS, SDL_Window *window);
-void SWITCH_HideWindow(_THIS, SDL_Window *window);
-void SWITCH_RaiseWindow(_THIS, SDL_Window *window);
-void SWITCH_MaximizeWindow(_THIS, SDL_Window *window);
-void SWITCH_MinimizeWindow(_THIS, SDL_Window *window);
-void SWITCH_RestoreWindow(_THIS, SDL_Window *window);
-void SWITCH_SetWindowGrab(_THIS, SDL_Window *window, SDL_bool grabbed);
-void SWITCH_DestroyWindow(_THIS, SDL_Window *window);
-void SWITCH_PumpEvents(_THIS);
-
 #endif /* SDL_VIDEO_DRIVER_SWITCH */
-#endif /* __SDL_SWITCHVIDEO_H__ */
+#endif /* SDL_switchvideo_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */
