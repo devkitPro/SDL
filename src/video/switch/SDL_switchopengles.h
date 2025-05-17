@@ -25,16 +25,16 @@
 
 #if SDL_VIDEO_DRIVER_SWITCH
 
-#include "../SDL_sysvideo.h"
 #include "../SDL_egl_c.h"
+#include "../SDL_sysvideo.h"
 
 /* OpenGLES functions */
-#define SWITCH_GLES_GetAttribute SDL_EGL_GetAttribute
-#define SWITCH_GLES_GetProcAddress SDL_EGL_GetProcAddress
-#define SWITCH_GLES_UnloadLibrary SDL_EGL_UnloadLibrary
+#define SWITCH_GLES_GetAttribute    SDL_EGL_GetAttribute
+#define SWITCH_GLES_GetProcAddress  SDL_EGL_GetProcAddress
+#define SWITCH_GLES_UnloadLibrary   SDL_EGL_UnloadLibrary
 #define SWITCH_GLES_SetSwapInterval SDL_EGL_SetSwapInterval
 #define SWITCH_GLES_GetSwapInterval SDL_EGL_GetSwapInterval
-#define SWITCH_GLES_DeleteContext SDL_EGL_DeleteContext
+#define SWITCH_GLES_DeleteContext   SDL_EGL_DeleteContext
 
 extern int SWITCH_GLES_LoadLibrary(_THIS, const char *path);
 extern SDL_GLContext SWITCH_GLES_CreateContext(_THIS, SDL_Window *window);

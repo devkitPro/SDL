@@ -24,30 +24,28 @@
 
 #if SDL_VIDEO_DRIVER_SWITCH
 
-#include "SDL_video.h"
 #include "SDL_switchopengles.h"
 #include "SDL_switchvideo.h"
+#include "SDL_video.h"
 
 /* EGL implementation of SDL OpenGL support */
 
-void
-SWITCH_GLES_DefaultProfileConfig(_THIS, int *mask, int *major, int *minor)
+void SWITCH_GLES_DefaultProfileConfig(_THIS, int *mask, int *major, int *minor)
 {
     *mask = SDL_GL_CONTEXT_PROFILE_ES;
     *major = 2;
     *minor = 0;
 }
 
-int
-SWITCH_GLES_LoadLibrary(_THIS, const char *path)
+int SWITCH_GLES_LoadLibrary(_THIS, const char *path)
 {
     return SDL_EGL_LoadLibrary(_this, path, EGL_DEFAULT_DISPLAY, 0);
 }
 
 SDL_EGL_CreateContext_impl(SWITCH)
-SDL_EGL_MakeCurrent_impl(SWITCH)
-SDL_EGL_SwapWindow_impl(SWITCH)
+    SDL_EGL_MakeCurrent_impl(SWITCH)
+        SDL_EGL_SwapWindow_impl(SWITCH)
 
 #endif /* SDL_VIDEO_DRIVER_SWITCH */
 
-/* vi: set ts=4 sw=4 expandtab: */
+    /* vi: set ts=4 sw=4 expandtab: */

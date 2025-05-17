@@ -24,10 +24,10 @@
 
 #include <switch.h>
 
-#include "SDL_events.h"
-#include "SDL_hints.h"
 #include "../../events/SDL_touch_c.h"
 #include "../../video/SDL_sysvideo.h"
+#include "SDL_events.h"
+#include "SDL_hints.h"
 
 static HidTouchScreenState touchState;
 static HidTouchScreenState touchStateOld;
@@ -35,7 +35,7 @@ static HidTouchScreenState touchStateOld;
 void SWITCH_InitTouch(void)
 {
     hidInitializeTouchScreen();
-    SDL_AddTouch((SDL_TouchID) 0, SDL_TOUCH_DEVICE_DIRECT, "Switch");
+    SDL_AddTouch((SDL_TouchID)0, SDL_TOUCH_DEVICE_DIRECT, "Switch");
     SDL_SetHintWithPriority(SDL_HINT_TOUCH_MOUSE_EVENTS, "0", SDL_HINT_DEFAULT);
     SDL_memset(&touchState, 0, sizeof(HidTouchScreenState));
     SDL_memset(&touchStateOld, 0, sizeof(HidTouchScreenState));
@@ -110,8 +110,8 @@ void SWITCH_PollTouch(void)
                               (SDL_FingerID)touchStateOld.touches[i].finger_id,
                               window,
                               SDL_FALSE,
-                              (float) touchStateOld.touches[i].x / rel_w,
-                              (float) touchStateOld.touches[i].y / rel_h, 1);
+                              (float)touchStateOld.touches[i].x / rel_w,
+                              (float)touchStateOld.touches[i].y / rel_h, 1);
             }
         }
     }

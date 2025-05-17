@@ -24,21 +24,21 @@
 
 #include <switch.h>
 
+#include "../../events/SDL_keyboard_c.h"
 #include "SDL_events.h"
 #include "SDL_log.h"
-#include "SDL_switchvideo.h"
 #include "SDL_switchkeyboard.h"
-#include "../../events/SDL_keyboard_c.h"
+#include "SDL_switchvideo.h"
 
-static bool keys[SDL_NUM_SCANCODES] = {0};
+static bool keys[SDL_NUM_SCANCODES] = { 0 };
 
-void
-SWITCH_InitKeyboard(void) {
+void SWITCH_InitKeyboard(void)
+{
     hidInitializeKeyboard();
 }
 
-void
-SWITCH_PollKeyboard(void) {
+void SWITCH_PollKeyboard(void)
+{
     HidKeyboardState state;
     SDL_Scancode scancode;
 
@@ -47,8 +47,8 @@ SWITCH_PollKeyboard(void) {
     }
 
     if (hidGetKeyboardStates(&state, 1)) {
-        for (scancode = SDL_SCANCODE_UNKNOWN; scancode < (SDL_Scancode) HidKeyboardKey_RightGui; scancode++) {
-            bool pressed = hidKeyboardStateGetKey(&state, (int) scancode);
+        for (scancode = SDL_SCANCODE_UNKNOWN; scancode < (SDL_Scancode)HidKeyboardKey_RightGui; scancode++) {
+            bool pressed = hidKeyboardStateGetKey(&state, (int)scancode);
             if (pressed && !keys[scancode]) {
                 SDL_SendKeyboardKey(pressed, scancode);
                 keys[scancode] = true;
@@ -60,8 +60,8 @@ SWITCH_PollKeyboard(void) {
     }
 }
 
-void
-SWITCH_QuitKeyboard(void) {
+void SWITCH_QuitKeyboard(void)
+{
 }
 
 #endif /* SDL_VIDEO_DRIVER_SWITCH */
