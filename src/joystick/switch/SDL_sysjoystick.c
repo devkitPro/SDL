@@ -18,15 +18,11 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
 #if SDL_JOYSTICK_SWITCH
 
-/* This is the dummy implementation of the SDL joystick API */
-
 #include "../SDL_sysjoystick.h"
-#include "SDL_events.h"
-#include "SDL_hints.h"
 
 #include <switch.h>
 
@@ -85,7 +81,13 @@ static const HidNpadButton pad_mapping_right_joy[] = {
     BIT(31), BIT(31), BIT(31), BIT(31)
 };
 
-static void SWITCH_UpdateControllerSupport(bool handheld)
+/* Function to perform the mapping from device index to the instance id for this index */
+static SDL_JoystickID SWITCH_JoystickGetDeviceInstanceID(int device_index)
+{
+    return (SDL_JoystickID)(device_index + 1);
+}
+
+static void SWITCH_UpdateControllerSupport(Uint64 timestamp, bool handheld)
 {
     if (!handheld) {
         HidLaControllerSupportResultInfo info;
@@ -97,7 +99,7 @@ static void SWITCH_UpdateControllerSupport(bool handheld)
 
     // update pads states
     for (int i = 0; i < JOYSTICK_COUNT; i++) {
-        SDL_Joystick *joy = SDL_JoystickFromInstanceID(i);
+        SDL_Joystick *joy = SDL_GetJoystickFromID(SWITCH_JoystickGetDeviceInstanceID(i));
         if (joy) {
             padUpdate(&state[i].pad);
             state[i].pad_type = state[i].pad_type_prev = hidGetNpadDeviceType((HidNpadIdType)i);
@@ -116,14 +118,14 @@ static void SWITCH_UpdateControllerSupport(bool handheld)
             hidInitializeVibrationDevices(&state[i].vibrationDeviceHandles, 1,
                                           HidNpadIdType_No1 + i, state[i].pad_style);
             // reset sdl joysticks states
-            SDL_PrivateJoystickAxis(joy, 0, 0);
-            SDL_PrivateJoystickAxis(joy, 1, 0);
-            SDL_PrivateJoystickAxis(joy, 2, 0);
-            SDL_PrivateJoystickAxis(joy, 3, 0);
+            SDL_SendJoystickAxis(timestamp, joy, 0, 0);
+            SDL_SendJoystickAxis(timestamp, joy, 1, 0);
+            SDL_SendJoystickAxis(timestamp, joy, 2, 0);
+            SDL_SendJoystickAxis(timestamp, joy, 3, 0);
             state[i].pad.buttons_cur = 0;
             state[i].pad.buttons_old = 0;
             for (int j = 0; j < joy->nbuttons; j++) {
-                SDL_PrivateJoystickButton(joy, j, SDL_RELEASED);
+                SDL_SendJoystickButton(timestamp, joy, j, false);
             }
         }
     }
@@ -132,7 +134,7 @@ static void SWITCH_UpdateControllerSupport(bool handheld)
 /* Function to scan the system for joysticks.
  * It should return 0, or -1 on an unrecoverable fatal error.
  */
-static int SWITCH_JoystickInit(void)
+static bool SWITCH_JoystickInit(void)
 {
     padConfigureInput(JOYSTICK_COUNT, HidNpadStyleSet_NpadStandard);
 
@@ -172,7 +174,11 @@ static int SWITCH_JoystickInit(void)
                                       HidNpadIdType_No1 + i, state[i].pad_style);
     }
 
-    return JOYSTICK_COUNT;
+    for (int i = 0; i < JOYSTICK_COUNT; ++i) {
+        SDL_PrivateJoystickAdded(SWITCH_JoystickGetDeviceInstanceID(i));
+    }
+
+    return true;
 }
 
 static int SWITCH_JoystickGetCount(void)
@@ -182,6 +188,12 @@ static int SWITCH_JoystickGetCount(void)
 
 static void SWITCH_JoystickDetect(void)
 {
+}
+
+static bool SWITCH_JoystickIsDevicePresent(Uint16 vendor_id, Uint16 product_id, Uint16 version, const char *name)
+{
+    // We don't override any other drivers
+    return false;
 }
 
 /* Function to get the device-dependent name of a joystick */
@@ -195,6 +207,11 @@ static const char *SWITCH_JoystickGetDevicePath(int index)
     return NULL;
 }
 
+static int SWITCH_JoystickGetDeviceSteamVirtualGamepadSlot(int device_index)
+{
+    return -1;
+}
+
 static int SWITCH_JoystickGetDevicePlayerIndex(int device_index)
 {
     return -1;
@@ -204,17 +221,11 @@ static void SWITCH_JoystickSetDevicePlayerIndex(int device_index, int player_ind
 {
 }
 
-static SDL_JoystickGUID SWITCH_JoystickGetDeviceGUID(int device_index)
+static SDL_GUID SWITCH_JoystickGetDeviceGUID(int device_index)
 {
     /* the GUID is just the name for now */
     const char *name = SWITCH_JoystickGetDeviceName(device_index);
     return SDL_CreateJoystickGUIDForName(name);
-}
-
-/* Function to perform the mapping from device index to the instance id for this index */
-static SDL_JoystickID SWITCH_JoystickGetDeviceInstanceID(int device_index)
-{
-    return device_index;
 }
 
 /* Function to open a joystick for use.
@@ -222,52 +233,50 @@ static SDL_JoystickID SWITCH_JoystickGetDeviceInstanceID(int device_index)
    This should fill the nbuttons and naxes fields of the joystick structure.
    It returns 0, or -1 if there is an error.
  */
-static int SWITCH_JoystickOpen(SDL_Joystick *joystick, int device_index)
+static bool SWITCH_JoystickOpen(SDL_Joystick *joystick, int device_index)
 {
     joystick->nbuttons = sizeof(pad_mapping_default) / sizeof(*pad_mapping_default);
     joystick->naxes = 4;
     joystick->nhats = 0;
-    joystick->instance_id = device_index;
+    joystick->instance_id = SWITCH_JoystickGetDeviceInstanceID(device_index);
 
-    return 0;
+    SDL_SetBooleanProperty(SDL_GetJoystickProperties(joystick), SDL_PROP_JOYSTICK_CAP_RUMBLE_BOOLEAN, true);
+
+    return true;
 }
 
-static int SWITCH_JoystickRumble(SDL_Joystick *joystick, Uint16 low_frequency_rumble, Uint16 high_frequency_rumble)
+static bool SWITCH_JoystickRumble(SDL_Joystick *joystick, Uint16 low_frequency_rumble, Uint16 high_frequency_rumble)
 {
-    int id = joystick->instance_id;
+    int index = joystick->instance_id - 1;
 
-    state[id].vibrationValues.amp_low =
-        state[id].vibrationValues.amp_high = low_frequency_rumble == 0 ? 0.0f : 320.0f;
-    state[id].vibrationValues.freq_low =
+    state[index].vibrationValues.amp_low =
+        state[index].vibrationValues.amp_high = low_frequency_rumble == 0 ? 0.0f : 320.0f;
+    state[index].vibrationValues.freq_low =
         low_frequency_rumble == 0 ? 160.0f : (float)low_frequency_rumble / 204;
-    state[id].vibrationValues.freq_high =
+    state[index].vibrationValues.freq_high =
         high_frequency_rumble == 0 ? 320.0f : (float)high_frequency_rumble / 204;
 
-    hidSendVibrationValues(&state[id].vibrationDeviceHandles, &state[id].vibrationValues, 1);
+    hidSendVibrationValues(&state[index].vibrationDeviceHandles, &state[index].vibrationValues, 1);
 
-    return 0;
+    return true;
 }
 
-static int SWITCH_JoystickRumbleTriggers(SDL_Joystick *joystick, Uint16 left, Uint16 right)
+static bool SWITCH_JoystickRumbleTriggers(SDL_Joystick *joystick, Uint16 left, Uint16 right)
 {
     return SDL_Unsupported();
 }
 
-static Uint32 SWITCH_JoystickGetCapabilities(SDL_Joystick *joystick)
+static bool SWITCH_JoystickSetLED(SDL_Joystick *joystick, Uint8 red, Uint8 green, Uint8 blue)
 {
     return 0;
 }
 
-static int SWITCH_JoystickSetLED(SDL_Joystick *joystick, Uint8 red, Uint8 green, Uint8 blue)
-{
-    return 0;
-}
-
-static int SWITCH_JoystickSendEffect(SDL_Joystick *joystick, const void *data, int size)
+static bool SWITCH_JoystickSendEffect(SDL_Joystick *joystick, const void *data, int size)
 {
     return SDL_Unsupported();
 }
-static int SWITCH_JoystickSetSensorsEnabled(SDL_Joystick *joystick, SDL_bool enabled)
+
+static bool SWITCH_JoystickSetSensorsEnabled(SDL_Joystick *joystick, bool enabled)
 {
     return SDL_Unsupported();
 }
@@ -279,9 +288,12 @@ static int SWITCH_JoystickSetSensorsEnabled(SDL_Joystick *joystick, SDL_bool ena
  */
 static void SWITCH_JoystickUpdate(SDL_Joystick *joystick)
 {
+    Uint64 timestamp = SDL_GetTicksNS();
+
     u64 diff;
-    int index = (int)SDL_JoystickInstanceID(joystick);
-    if (index >= JOYSTICK_COUNT || SDL_IsTextInputActive()) {
+    int index = joystick->instance_id - 1;
+
+    if (index >= JOYSTICK_COUNT || SDL_TextInputActive(SDL_GetKeyboardFocus())) {
         return;
     }
 
@@ -294,7 +306,7 @@ static void SWITCH_JoystickUpdate(SDL_Joystick *joystick)
     state[index].pad_type = hidGetNpadDeviceType((HidNpadIdType)index);
     state[index].pad_style = hidGetNpadStyleSet((HidNpadIdType)index);
     if (state[index].pad_type != state[index].pad_type_prev || state[index].pad_style != state[index].pad_style_prev) {
-        SWITCH_UpdateControllerSupport(padIsHandheld(&state[index].pad) ? true : false);
+        SWITCH_UpdateControllerSupport(timestamp, padIsHandheld(&state[index].pad) ? true : false);
         return;
     }
 
@@ -302,21 +314,21 @@ static void SWITCH_JoystickUpdate(SDL_Joystick *joystick)
     if (state[index].pad_style & HidNpadStyleTag_NpadJoyDual || (state[index].pad_type != HidDeviceTypeBits_JoyLeft && state[index].pad_type != HidDeviceTypeBits_JoyRight)) {
         // axis left
         if (state[index].sticks_old[0].x != state[index].pad.sticks[0].x) {
-            SDL_PrivateJoystickAxis(joystick, 0, (Sint16)state[index].pad.sticks[0].x);
+            SDL_SendJoystickAxis(timestamp, joystick, 0, (Sint16)state[index].pad.sticks[0].x);
             state[index].sticks_old[0].x = state[index].pad.sticks[0].x;
         }
         if (state[index].sticks_old[0].y != state[index].pad.sticks[0].y) {
-            SDL_PrivateJoystickAxis(joystick, 1, (Sint16)-state[index].pad.sticks[0].y);
+            SDL_SendJoystickAxis(timestamp, joystick, 1, (Sint16)-state[index].pad.sticks[0].y);
             state[index].sticks_old[0].y = -state[index].pad.sticks[0].y;
         }
         state[index].sticks_old[0] = padGetStickPos(&state[index].pad, 0);
         // axis right
         if (state[index].sticks_old[1].x != state[index].pad.sticks[1].x) {
-            SDL_PrivateJoystickAxis(joystick, 2, (Sint16)state[index].pad.sticks[1].x);
+            SDL_SendJoystickAxis(timestamp, joystick, 2, (Sint16)state[index].pad.sticks[1].x);
             state[index].sticks_old[1].x = state[index].pad.sticks[1].x;
         }
         if (state[index].sticks_old[1].y != state[index].pad.sticks[1].y) {
-            SDL_PrivateJoystickAxis(joystick, 3, (Sint16)-state[index].pad.sticks[1].y);
+            SDL_SendJoystickAxis(timestamp, joystick, 3, (Sint16)-state[index].pad.sticks[1].y);
             state[index].sticks_old[1].y = -state[index].pad.sticks[1].y;
         }
         state[index].sticks_old[1] = padGetStickPos(&state[index].pad, 1);
@@ -327,9 +339,10 @@ static void SWITCH_JoystickUpdate(SDL_Joystick *joystick)
     if (diff) {
         for (int i = 0; i < joystick->nbuttons; i++) {
             if (diff & state[index].pad_mapping[i]) {
-                SDL_PrivateJoystickButton(
+                SDL_SendJoystickButton(
+                    timestamp,
                     joystick, i,
-                    state[index].pad.buttons_cur & state[index].pad_mapping[i] ? SDL_PRESSED : SDL_RELEASED);
+                    (state[index].pad.buttons_cur & state[index].pad_mapping[i]) != 0);
             }
         }
     }
@@ -343,39 +356,93 @@ static void SWITCH_JoystickClose(SDL_Joystick *joystick)
 /* Function to perform any system-specific joystick related cleanup */
 static void SWITCH_JoystickQuit(void)
 {
+    for (int i = 0; i < JOYSTICK_COUNT; ++i) {
+        SDL_PrivateJoystickRemoved(SWITCH_JoystickGetDeviceInstanceID(i));
+    }
 }
 
-static SDL_bool SWITCH_JoystickGetGamepadMapping(int device_index, SDL_GamepadMapping *out)
+static bool SWITCH_JoystickGetGamepadMapping(int device_index, SDL_GamepadMapping *out)
 {
-    return SDL_FALSE;
+    // clang-format off
+    *out = (SDL_GamepadMapping){
+#if 0
+        /*
+         * This is as they are physically.
+         */
+        .a             = {.kind = EMappingKind_Button, .target =   0},
+        .b             = {.kind = EMappingKind_Button, .target =   1},
+        .x             = {.kind = EMappingKind_Button, .target =   2},
+        .y             = {.kind = EMappingKind_Button, .target =   3},
+#else
+        /*
+         * This is as they are when swapped, i.e. what everything else expects.
+         * This also matches the behaviour of the old SDL2 port.
+         */
+        .a             = {.kind = EMappingKind_Button, .target =   1},
+        .b             = {.kind = EMappingKind_Button, .target =   0},
+        .x             = {.kind = EMappingKind_Button, .target =   3},
+        .y             = {.kind = EMappingKind_Button, .target =   2},
+#endif
+        .back          = {.kind = EMappingKind_Button, .target =  11},
+        .guide         = {.kind = EMappingKind_None,   .target = 255},
+        .start         = {.kind = EMappingKind_Button, .target =  10},
+        .leftstick     = {.kind = EMappingKind_Button, .target =   4},
+        .rightstick    = {.kind = EMappingKind_Button, .target =   5},
+        .leftshoulder  = {.kind = EMappingKind_Button, .target =   6},
+        .rightshoulder = {.kind = EMappingKind_Button, .target =   7},
+        .dpup          = {.kind = EMappingKind_Button, .target =  13},
+        .dpdown        = {.kind = EMappingKind_Button, .target =  15},
+        .dpleft        = {.kind = EMappingKind_Button, .target =  12},
+        .dpright       = {.kind = EMappingKind_Button, .target =  14},
+        .misc1         = {.kind = EMappingKind_None,   .target = 255},
+        .misc2         = {.kind = EMappingKind_None,   .target = 255},
+        .misc3         = {.kind = EMappingKind_None,   .target = 255},
+        .misc4         = {.kind = EMappingKind_None,   .target = 255},
+        .misc5         = {.kind = EMappingKind_None,   .target = 255},
+        .misc6         = {.kind = EMappingKind_None,   .target = 255},
+        .right_paddle1 = {.kind = EMappingKind_None,   .target = 255},
+        .left_paddle1  = {.kind = EMappingKind_None,   .target = 255},
+        .right_paddle2 = {.kind = EMappingKind_None,   .target = 255},
+        .left_paddle2  = {.kind = EMappingKind_None,   .target = 255},
+        .leftx         = {.kind = EMappingKind_Axis,   .target =   0},
+        .lefty         = {.kind = EMappingKind_Axis,   .target =   1},
+        .rightx        = {.kind = EMappingKind_Axis,   .target =   2},
+        .righty        = {.kind = EMappingKind_Axis,   .target =   3},
+        .lefttrigger   = {.kind = EMappingKind_Button, .target =   8},
+        .righttrigger  = {.kind = EMappingKind_Button, .target =   9},
+        .touchpad      = {.kind = EMappingKind_None,   .target = 255},
+    };
+    // clang-format on
+    return true;
 }
 
 SDL_JoystickDriver SDL_SWITCH_JoystickDriver = {
-    SWITCH_JoystickInit,
-    SWITCH_JoystickGetCount,
-    SWITCH_JoystickDetect,
-    SWITCH_JoystickGetDeviceName,
-    SWITCH_JoystickGetDevicePath,
-    SWITCH_JoystickGetDevicePlayerIndex,
-    SWITCH_JoystickSetDevicePlayerIndex,
-    SWITCH_JoystickGetDeviceGUID,
-    SWITCH_JoystickGetDeviceInstanceID,
+    .Init = SWITCH_JoystickInit,
+    .GetCount = SWITCH_JoystickGetCount,
+    .Detect = SWITCH_JoystickDetect,
+    .IsDevicePresent = SWITCH_JoystickIsDevicePresent,
+    .GetDeviceName = SWITCH_JoystickGetDeviceName,
+    .GetDevicePath = SWITCH_JoystickGetDevicePath,
+    .GetDeviceSteamVirtualGamepadSlot = SWITCH_JoystickGetDeviceSteamVirtualGamepadSlot,
+    .GetDevicePlayerIndex = SWITCH_JoystickGetDevicePlayerIndex,
+    .SetDevicePlayerIndex = SWITCH_JoystickSetDevicePlayerIndex,
+    .GetDeviceGUID = SWITCH_JoystickGetDeviceGUID,
+    .GetDeviceInstanceID = SWITCH_JoystickGetDeviceInstanceID,
 
-    SWITCH_JoystickOpen,
+    .Open = SWITCH_JoystickOpen,
 
-    SWITCH_JoystickRumble,
-    SWITCH_JoystickRumbleTriggers,
-    SWITCH_JoystickGetCapabilities,
+    .Rumble = SWITCH_JoystickRumble,
+    .RumbleTriggers = SWITCH_JoystickRumbleTriggers,
 
-    SWITCH_JoystickSetLED,
-    SWITCH_JoystickSendEffect,
-    SWITCH_JoystickSetSensorsEnabled,
+    .SetLED = SWITCH_JoystickSetLED,
+    .SendEffect = SWITCH_JoystickSendEffect,
+    .SetSensorsEnabled = SWITCH_JoystickSetSensorsEnabled,
 
-    SWITCH_JoystickUpdate,
-    SWITCH_JoystickClose,
-    SWITCH_JoystickQuit,
+    .Update = SWITCH_JoystickUpdate,
+    .Close = SWITCH_JoystickClose,
+    .Quit = SWITCH_JoystickQuit,
 
-    SWITCH_JoystickGetGamepadMapping,
+    .GetGamepadMapping = SWITCH_JoystickGetGamepadMapping,
 };
 
 #endif /* SDL_JOYSTICK_SWITCH */

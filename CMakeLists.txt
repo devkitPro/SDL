@@ -2943,6 +2943,12 @@ elseif(NINTENDO_SWITCH)
     sdl_compile_options(PRIVATE -DSDL_VIDEO_STATIC_ANGLE)
   endif()
 
+  if(SDL_JOYSTICK)
+    set(SDL_JOYSTICK_SWITCH 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/joystick/switch/*.c")
+    set(HAVE_SDL_JOYSTICK TRUE)
+  endif()
+
   CheckPTHREAD()
 
   if(SDL_CLOCK_GETTIME)
