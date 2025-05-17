@@ -18,196 +18,206 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
 #if SDL_AUDIO_DRIVER_SWITCH
 
 #include <malloc.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-
-#include "../SDL_audio_c.h"
-#include "../SDL_audiodev_c.h"
-#include "SDL_audio.h"
 
 #include "SDL_switchaudio.h"
 
+// clang-format off
 static const AudioRendererConfig arConfig = {
-    .output_rate = AudioRendererOutputRate_48kHz,
-    .num_voices = 24,
-    .num_effects = 0,
-    .num_sinks = 1,
-    .num_mix_objs = 1,
+    .output_rate     = AudioRendererOutputRate_48kHz,
+    .num_voices      = 24,
+    .num_effects     = 0,
+    .num_sinks       = 1,
+    .num_mix_objs    = 1,
     .num_mix_buffers = 2,
 };
+// clang-format on
 
-static int SWITCHAUDIO_OpenDevice(_THIS, const char *devname)
+static bool SWITCHAUDIO_OpenDevice(SDL_AudioDevice *device)
 {
     static const u8 sink_channels[] = { 0, 1 };
-    SDL_bool supported_format = SDL_FALSE;
+    bool supported_format = false;
     SDL_AudioFormat test_format;
     Result res;
     u32 size;
     int mpid;
+    const SDL_AudioFormat *closefmts;
 
-    this->hidden = (struct SDL_PrivateAudioData *)SDL_malloc(sizeof(*this->hidden));
-    if (this->hidden == NULL) {
+    device->hidden = (struct SDL_PrivateAudioData *)SDL_malloc(sizeof(*device->hidden));
+    if (device->hidden == NULL) {
         return SDL_OutOfMemory();
     }
-    SDL_zerop(this->hidden);
+    SDL_zerop(device->hidden);
 
     res = audrenInitialize(&arConfig);
     if (R_FAILED(res)) {
         return SDL_SetError("audrenInitialize failed (0x%x)", res);
     }
-    this->hidden->audr_device = true;
+    device->hidden->audr_device = true;
 
-    res = audrvCreate(&this->hidden->driver, &arConfig, 2);
+    res = audrvCreate(&device->hidden->driver, &arConfig, 2);
     if (R_FAILED(res)) {
         return SDL_SetError("audrvCreate failed (0x%x)", res);
     }
-    this->hidden->audr_driver = true;
+    device->hidden->audr_driver = true;
 
-    test_format = SDL_FirstAudioFormat(this->spec.format);
-    while ((!supported_format) && (test_format)) {
-        if (test_format == AUDIO_S16SYS) {
-            supported_format = SDL_TRUE;
-        } else {
-            test_format = SDL_NextAudioFormat();
+    closefmts = SDL_ClosestAudioFormats(device->spec.format);
+    while ((test_format = *(closefmts++)) != 0) {
+        if (test_format == SDL_AUDIO_S16) {
+            supported_format = true;
+            break;
         }
     }
+
     if (!supported_format) {
         return SDL_SetError("Unsupported audio format");
     }
 
-    this->spec.format = test_format;
-    SDL_CalculateAudioSpec(&this->spec);
+    device->spec.format = test_format;
 
-    size = (u32)((this->spec.size * 2) + 0xfff) & ~0xfff;
-    this->hidden->pool = memalign(0x1000, size);
-    for (int i = 0; i < 2; i++) {
-        this->hidden->buffer[i].data_raw = this->hidden->pool;
-        this->hidden->buffer[i].size = this->spec.size * 2;
-        this->hidden->buffer[i].start_sample_offset = i * this->spec.samples;
-        this->hidden->buffer[i].end_sample_offset = this->hidden->buffer[i].start_sample_offset + this->spec.samples;
-        this->hidden->buffer_tmp = malloc(this->spec.size);
+    SDL_UpdatedAudioDeviceFormat(device);
+
+    if (device->buffer_size >= SDL_MAX_UINT32 / 2) {
+        return SDL_SetError("Mixing buffer is too large.");
     }
 
-    mpid = audrvMemPoolAdd(&this->hidden->driver, this->hidden->pool, size);
-    audrvMemPoolAttach(&this->hidden->driver, mpid);
+    size = (u32)((device->buffer_size * 2) + 0xfff) & ~0xfff;
+    device->hidden->pool = memalign(0x1000, size);
+    for (int i = 0; i < 2; i++) {
+        device->hidden->buffer[i].data_raw = device->hidden->pool;
+        device->hidden->buffer[i].size = device->buffer_size * 2;
+        device->hidden->buffer[i].start_sample_offset = i * device->sample_frames;
+        device->hidden->buffer[i].end_sample_offset = device->hidden->buffer[i].start_sample_offset + device->sample_frames;
+        device->hidden->buffer_tmp = SDL_malloc(device->buffer_size);
+    }
 
-    audrvDeviceSinkAdd(&this->hidden->driver, AUDREN_DEFAULT_DEVICE_NAME, 2, sink_channels);
+    mpid = audrvMemPoolAdd(&device->hidden->driver, device->hidden->pool, size);
+    audrvMemPoolAttach(&device->hidden->driver, mpid);
+
+    audrvDeviceSinkAdd(&device->hidden->driver, AUDREN_DEFAULT_DEVICE_NAME, 2, sink_channels);
 
     res = audrenStartAudioRenderer();
     if (R_FAILED(res)) {
         return SDL_SetError("audrenStartAudioRenderer failed (0x%x)", res);
     }
 
-    audrvVoiceInit(&this->hidden->driver, 0, this->spec.channels, PcmFormat_Int16, this->spec.freq);
-    audrvVoiceSetDestinationMix(&this->hidden->driver, 0, AUDREN_FINAL_MIX_ID);
-    if (this->spec.channels == 1) {
-        audrvVoiceSetMixFactor(&this->hidden->driver, 0, 1.0f, 0, 0);
-        audrvVoiceSetMixFactor(&this->hidden->driver, 0, 1.0f, 0, 1);
+    audrvVoiceInit(&device->hidden->driver, 0, device->spec.channels, PcmFormat_Int16, device->spec.freq);
+    audrvVoiceSetDestinationMix(&device->hidden->driver, 0, AUDREN_FINAL_MIX_ID);
+    if (device->spec.channels == 1) {
+        audrvVoiceSetMixFactor(&device->hidden->driver, 0, 1.0f, 0, 0);
+        audrvVoiceSetMixFactor(&device->hidden->driver, 0, 1.0f, 0, 1);
     } else {
-        audrvVoiceSetMixFactor(&this->hidden->driver, 0, 1.0f, 0, 0);
-        audrvVoiceSetMixFactor(&this->hidden->driver, 0, 0.0f, 0, 1);
-        audrvVoiceSetMixFactor(&this->hidden->driver, 0, 0.0f, 1, 0);
-        audrvVoiceSetMixFactor(&this->hidden->driver, 0, 1.0f, 1, 1);
+        audrvVoiceSetMixFactor(&device->hidden->driver, 0, 1.0f, 0, 0);
+        audrvVoiceSetMixFactor(&device->hidden->driver, 0, 0.0f, 0, 1);
+        audrvVoiceSetMixFactor(&device->hidden->driver, 0, 0.0f, 1, 0);
+        audrvVoiceSetMixFactor(&device->hidden->driver, 0, 1.0f, 1, 1);
     }
 
-    audrvVoiceStart(&this->hidden->driver, 0);
+    audrvVoiceStart(&device->hidden->driver, 0);
 
-    return 0;
+    return true;
 }
 
-static void SWITCHAUDIO_PlayDevice(_THIS)
+static bool SWITCHAUDIO_PlayDevice(SDL_AudioDevice *device, const Uint8 *buffer, int buflen)
 {
     int current = -1;
     for (int i = 0; i < 2; i++) {
-        if (this->hidden->buffer[i].state == AudioDriverWaveBufState_Free || this->hidden->buffer[i].state == AudioDriverWaveBufState_Done) {
+        if (device->hidden->buffer[i].state == AudioDriverWaveBufState_Free || device->hidden->buffer[i].state == AudioDriverWaveBufState_Done) {
             current = i;
             break;
         }
     }
 
+    /* paranoia */
+    SDL_assert(buffer == device->hidden->buffer_tmp);
+    SDL_assert(buflen == device->buffer_size);
+
     if (current >= 0) {
-        Uint8 *ptr = (Uint8 *)(this->hidden->pool + (current * this->spec.size));
-        memcpy(ptr, this->hidden->buffer_tmp, this->spec.size);
-        armDCacheFlush(ptr, this->spec.size);
-        audrvVoiceAddWaveBuf(&this->hidden->driver, 0, &this->hidden->buffer[current]);
-    } else if (!audrvVoiceIsPlaying(&this->hidden->driver, 0)) {
-        audrvVoiceStart(&this->hidden->driver, 0);
+        Uint8 *ptr = (Uint8 *)(device->hidden->pool + (current * device->buffer_size));
+        memcpy(ptr, device->hidden->buffer_tmp, device->buffer_size);
+        armDCacheFlush(ptr, device->buffer_size);
+        audrvVoiceAddWaveBuf(&device->hidden->driver, 0, &device->hidden->buffer[current]);
+    } else if (!audrvVoiceIsPlaying(&device->hidden->driver, 0)) {
+        audrvVoiceStart(&device->hidden->driver, 0);
     }
 
-    audrvUpdate(&this->hidden->driver);
+    audrvUpdate(&device->hidden->driver);
 
     if (current >= 0) {
-        while (this->hidden->buffer[current].state != AudioDriverWaveBufState_Playing) {
-            audrvUpdate(&this->hidden->driver);
+        while (device->hidden->buffer[current].state != AudioDriverWaveBufState_Playing) {
+            audrvUpdate(&device->hidden->driver);
             audrenWaitFrame();
         }
     } else {
         current = -1;
         for (int i = 0; i < 2; i++) {
-            if (this->hidden->buffer[i].state == AudioDriverWaveBufState_Playing) {
+            if (device->hidden->buffer[i].state == AudioDriverWaveBufState_Playing) {
                 current = i;
                 break;
             }
         }
-        while (this->hidden->buffer[current].state == AudioDriverWaveBufState_Playing) {
-            audrvUpdate(&this->hidden->driver);
+        while (device->hidden->buffer[current].state == AudioDriverWaveBufState_Playing) {
+            audrvUpdate(&device->hidden->driver);
             audrenWaitFrame();
         }
     }
+
+    return true;
 }
 
-static void SWITCHAUDIO_WaitDevice(_THIS)
+static bool SWITCHAUDIO_WaitDevice(SDL_AudioDevice *device)
 {
+    return true;
 }
 
-static Uint8 *SWITCHAUDIO_GetDeviceBuf(_THIS)
+static Uint8 *SWITCHAUDIO_GetDeviceBuf(SDL_AudioDevice *device, int *buffer_size)
 {
-    return this->hidden->buffer_tmp;
+    return device->hidden->buffer_tmp;
 }
 
-static void SWITCHAUDIO_CloseDevice(_THIS)
+static void SWITCHAUDIO_CloseDevice(SDL_AudioDevice *device)
 {
-    if (this->hidden->audr_driver) {
-        audrvClose(&this->hidden->driver);
+    if (device->hidden->audr_driver) {
+        audrvClose(&device->hidden->driver);
     }
 
-    if (this->hidden->audr_device) {
+    if (device->hidden->audr_device) {
         audrenExit();
     }
 
-    if (this->hidden->buffer_tmp) {
-        free(this->hidden->buffer_tmp);
+    if (device->hidden->buffer_tmp) {
+        free(device->hidden->buffer_tmp);
     }
 
-    SDL_free(this->hidden);
+    SDL_free(device->hidden);
 }
 
-static void SWITCHAUDIO_ThreadInit(_THIS)
-{
-}
-
-static SDL_bool SWITCHAUDIO_Init(SDL_AudioDriverImpl *impl)
+static bool SWITCHAUDIO_Init(SDL_AudioDriverImpl *impl)
 {
     impl->OpenDevice = SWITCHAUDIO_OpenDevice;
     impl->PlayDevice = SWITCHAUDIO_PlayDevice;
     impl->WaitDevice = SWITCHAUDIO_WaitDevice;
     impl->GetDeviceBuf = SWITCHAUDIO_GetDeviceBuf;
     impl->CloseDevice = SWITCHAUDIO_CloseDevice;
-    impl->ThreadInit = SWITCHAUDIO_ThreadInit;
 
-    impl->OnlyHasDefaultOutputDevice = 1;
+    impl->OnlyHasDefaultPlaybackDevice = true;
 
     return 1;
 }
 
+// clang-format off
 AudioBootStrap SWITCHAUDIO_bootstrap = {
-    "switch", "Nintendo Switch audio driver", SWITCHAUDIO_Init, 0
+    .name         = "switch",
+    .desc         = "Nintendo Switch audio driver",
+    .init         = SWITCHAUDIO_Init,
+    .demand_only  = false,
+    .is_preferred = true,
 };
+// clang-format on
 
 #endif /* SDL_AUDIO_DRIVER_SWITCH */

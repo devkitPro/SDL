@@ -272,6 +272,7 @@
 #cmakedefine SDL_AUDIO_DRIVER_PSP 1
 #cmakedefine SDL_AUDIO_DRIVER_PS2 1
 #cmakedefine SDL_AUDIO_DRIVER_N3DS 1
+#cmakedefine SDL_AUDIO_DRIVER_SWITCH 1
 #cmakedefine SDL_AUDIO_DRIVER_QNX 1
 
 /* Enable various input drivers */

@@ -2943,6 +2943,12 @@ elseif(NINTENDO_SWITCH)
     sdl_compile_options(PRIVATE -DSDL_VIDEO_STATIC_ANGLE)
   endif()
 
+  if(SDL_AUDIO)
+    set(SDL_AUDIO_DRIVER_SWITCH 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/audio/switch/*.c")
+    set(HAVE_SDL_AUDIO TRUE)
+  endif()
+
   set(SDL_FILESYSTEM_SWITCH 1)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/filesystem/switch/*.c")
   set(HAVE_SDL_FILESYSTEM TRUE)
