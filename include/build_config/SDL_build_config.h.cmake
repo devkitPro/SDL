@@ -466,6 +466,7 @@
 #cmakedefine SDL_FILESYSTEM_PSP 1
 #cmakedefine SDL_FILESYSTEM_PS2 1
 #cmakedefine SDL_FILESYSTEM_N3DS 1
+#cmakedefine SDL_FILESYSTEM_SWITCH 1
 
 /* Enable system storage support */
 #cmakedefine SDL_STORAGE_STEAM @SDL_STORAGE_STEAM@

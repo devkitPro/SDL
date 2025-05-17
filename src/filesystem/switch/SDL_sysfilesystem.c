@@ -18,29 +18,23 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "../../SDL_internal.h"
+#include "SDL_internal.h"
 
 #ifdef SDL_FILESYSTEM_SWITCH
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* System dependent filesystem routines                                */
 
-#include <fcntl.h>
 #include <limits.h>
 #include <sys/unistd.h>
 
-#include "SDL_error.h"
-#include "SDL_filesystem.h"
-#include "SDL_stdinc.h"
-
-char *SDL_GetBasePath(void)
+char *SDL_SYS_GetBasePath(void)
 {
-    const char *basepath = "romfs:/";
-    char *retval = SDL_strdup(basepath);
-    return retval;
+    char *base_path = SDL_strdup("romfs:/");
+    return base_path;
 }
 
-char *SDL_GetPrefPath(const char *org, const char *app)
+char *SDL_SYS_GetPrefPath(const char *org, const char *app)
 {
     char *ret = NULL;
     char buf[PATH_MAX];
@@ -57,6 +51,12 @@ char *SDL_GetPrefPath(const char *org, const char *app)
         return ret;
     }
 
+    return NULL;
+}
+
+char *SDL_SYS_GetUserFolder(SDL_Folder folder)
+{
+    SDL_Unsupported();
     return NULL;
 }
 
