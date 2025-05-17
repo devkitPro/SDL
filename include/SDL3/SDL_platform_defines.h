@@ -473,4 +473,8 @@
 #define SDL_PLATFORM_3DS 1
 #endif
 
+#if defined(__SWITCH__) && __SWITCH__
+#define SDL_PLATFORM_SWITCH 1
+#endif
+
 #endif /* SDL_platform_defines_h_ */
