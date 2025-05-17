@@ -24,15 +24,14 @@
 #ifndef SDL_POWER_DISABLED
 #if SDL_POWER_SWITCH
 
-#include <switch.h>
 #include "SDL_power.h"
+#include <switch.h>
 
-SDL_bool
-SDL_GetPowerInfo_SWITCH(SDL_PowerState *state, int *seconds,
-                        int *percent) {
+SDL_bool SDL_GetPowerInfo_SWITCH(SDL_PowerState *state, int *seconds, int *percent)
+{
     PsmChargerType chargerType;
     u32 charge;
-    //double age;
+    // double age;
     Result rc;
 
     rc = psmGetChargerType(&chargerType);
@@ -44,11 +43,11 @@ SDL_GetPowerInfo_SWITCH(SDL_PowerState *state, int *seconds,
     }
 
     psmGetBatteryChargePercentage(&charge);
-    *percent = (int) charge;
+    *percent = (int)charge;
 
     // TODO: use approximation for now, ~6h00 for a fully charged battery
-    *seconds = ((int) charge * 21600) / 100;
-    //psmGetBatteryAgePercentage(&age);
+    *seconds = ((int)charge * 21600) / 100;
+    // psmGetBatteryAgePercentage(&age);
     //*seconds = (int) age;
 
     if (chargerType == PsmChargerType_Unconnected) {
