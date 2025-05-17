@@ -33,6 +33,10 @@
 #include <gx2/mem.h>
 #include <gx2r/surface.h>
 #include <gx2r/resource.h>
+#include <coreinit/cache.h>
+#include <coreinit/memory.h>
+#include <dmae/mem.h>
+#include <dmae/sync.h>
 
 #include <malloc.h>
 #include <stdarg.h>
@@ -170,8 +174,10 @@ int WIIU_SDL_UpdateTexture(SDL_Renderer * renderer, SDL_Texture * texture,
     WIIU_VideoData *videodata = (WIIU_VideoData *) SDL_GetVideoDevice()->driverdata;
     Uint32 BytesPerPixel = SDL_BYTESPERPIXEL(texture->format);
     size_t length = rect->w * BytesPerPixel;
+    size_t total_size = length * rect->h;
     Uint8 *src = (Uint8 *) pixels, *dst;
     int row, dst_pitch;
+    bool src_aligned, dst_aligned;
 
     if (!videodata->hasForeground) {
         return 0;
@@ -180,10 +186,30 @@ int WIIU_SDL_UpdateTexture(SDL_Renderer * renderer, SDL_Texture * texture,
     /* We write the rules, and we say all textures are streaming */
     WIIU_SDL_LockTexture(renderer, texture, rect, (void**)&dst, &dst_pitch);
 
-    for (row = 0; row < rect->h; ++row) {
-        SDL_memcpy(dst, src, length);
-        src += pitch;
-        dst += dst_pitch;
+    if (length == pitch && length == dst_pitch) {
+        /* DMA requires 8 byte alignment */
+        src_aligned = ((uintptr_t)src & 7U) == 0;
+        dst_aligned = ((uintptr_t)dst & 7U) == 0;
+        /* DMA works best on textures bigger than 5KiB */
+        if ((total_size > 5120) && (src_aligned && dst_aligned)) {
+            DCFlushRange(src, total_size);
+            /* Run a single DMA transfer and wait until transfer is done */
+            while (!DMAEWaitDone(DMAECopyMem(dst, src, total_size >> 2, DMAE_SWAP_NONE)));
+        } else {
+            /* Otherwise, fallback to a single memory copy */
+            OSBlockMove(dst, src, total_size, true);
+        }
+    } else {
+        /* Flush source first */
+        DCFlushRange(src, total_size);
+        for (row = 0; row < rect->h; ++row) {
+            /* Do not flush per line here */
+            OSBlockMove(dst, src, length, false);
+            src += pitch;
+            dst += dst_pitch;
+        }
+        /* Now that we're done, we can flush the entire destination at once */
+        DCFlushRange(dst, dst_pitch * rect->h);
     }
 
     WIIU_SDL_UnlockTexture(renderer, texture);
