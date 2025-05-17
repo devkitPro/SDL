@@ -25,24 +25,22 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* System dependent filesystem routines                                */
 
-#include <limits.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/unistd.h>
 
 #include "SDL_error.h"
-#include "SDL_stdinc.h"
 #include "SDL_filesystem.h"
+#include "SDL_stdinc.h"
 
-char *
-SDL_GetBasePath(void)
+char *SDL_GetBasePath(void)
 {
     const char *basepath = "romfs:/";
     char *retval = SDL_strdup(basepath);
     return retval;
 }
 
-char *
-SDL_GetPrefPath(const char *org, const char *app)
+char *SDL_GetPrefPath(const char *org, const char *app)
 {
     char *ret = NULL;
     char buf[PATH_MAX];
@@ -50,7 +48,7 @@ SDL_GetPrefPath(const char *org, const char *app)
 
     if (getcwd(buf, PATH_MAX)) {
         len = strlen(buf) + 2;
-        ret = (char *) SDL_malloc(len);
+        ret = (char *)SDL_malloc(len);
         if (!ret) {
             SDL_OutOfMemory();
             return NULL;
