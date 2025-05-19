@@ -140,13 +140,13 @@ endif()
 #  for the time being. This default will change to ON once this becomes
 #  commonly supported in browsers or the Emscripten team makes a single
 #  binary work everywhere.
-if (UNIX_OR_MAC_SYS AND NOT EMSCRIPTEN)
+if ((UNIX_OR_MAC_SYS OR NINTENDO_SWITCH) AND NOT EMSCRIPTEN)
   set(SDL_PTHREADS_DEFAULT ON)
 else()
   set(SDL_PTHREADS_DEFAULT OFF)
 endif()
 
-if(UNIX_SYS OR ANDROID)
+if((UNIX_SYS OR NINTENDO_SWITCH) OR ANDROID)
   set(SDL_CLOCK_GETTIME_DEFAULT ON)
 else()
   set(SDL_CLOCK_GETTIME_DEFAULT OFF)
@@ -219,7 +219,7 @@ if(EMSCRIPTEN)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
-if(VITA OR PSP OR PS2 OR N3DS OR RISCOS)
+if(VITA OR PSP OR PS2 OR N3DS OR RISCOS OR NINTENDO_SWITCH)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
@@ -2924,6 +2924,58 @@ elseif(N3DS)
   set(HAVE_SDL_LOCALE TRUE)
 
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/io/n3ds/*.c")
+elseif(NINTENDO_SWITCH)
+  sdl_link_dependency(nx LIBS nx)
+
+  if(SDL_VIDEO)
+    set(SDL_VIDEO_DRIVER_SWITCH 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/video/switch/*.c")
+    set(HAVE_SDL_VIDEO TRUE)
+
+    CheckEGL()
+    if(HAVE_OPENGL_EGL)
+      sdl_link_dependency(opengl LIBS EGL glapi drm_nouveau)
+    endif()
+
+    CheckOpenGLES()
+    CheckOpenGL()
+
+    sdl_compile_options(PRIVATE -DSDL_VIDEO_STATIC_ANGLE)
+  endif()
+
+  if(SDL_AUDIO)
+    set(SDL_AUDIO_DRIVER_SWITCH 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/audio/switch/*.c")
+    set(HAVE_SDL_AUDIO TRUE)
+  endif()
+
+  set(SDL_FILESYSTEM_SWITCH 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/filesystem/switch/*.c")
+  set(HAVE_SDL_FILESYSTEM TRUE)
+
+  if(SDL_POWER)
+    set(SDL_POWER_SWITCH 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/power/switch/*.c")
+    set(HAVE_SDL_POWER TRUE)
+  endif()
+
+  if(SDL_JOYSTICK)
+    set(SDL_JOYSTICK_SWITCH 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/joystick/switch/*.c")
+    set(HAVE_SDL_JOYSTICK TRUE)
+  endif()
+
+  CheckPTHREAD()
+
+  if(SDL_CLOCK_GETTIME)
+    set(HAVE_CLOCK_GETTIME 1)
+  endif()
+
+  set(SDL_TIMER_SWITCH 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/switch/*.c")
+  set(HAVE_SDL_TIMERS TRUE)
+
+  set(SDL_STATIC_PIC TRUE)
 endif()
 
 sdl_sources(${SDL3_SOURCE_DIR}/src/dialog/SDL_dialog.c)
