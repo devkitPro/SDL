@@ -37,9 +37,11 @@
 #include "SDL_log.h"
 #include "SDL_assert.h"
 #include "SDL_events.h"
+#include "SDL_system.h"
 
 #include "SDL_wiiujoystick.h"
 #include "../../video/SDL_sysvideo.h"
+#include "../../video/wiiu/SDL_wiiu_swkbd.h"
 
 //index with device_index, get WIIU_DEVICE*
 static int deviceMap[MAX_CONTROLLERS];
@@ -152,7 +154,7 @@ static int WIIU_JoystickGetCount(void)
 static void WIIU_JoystickDetect(void)
 {
 /*	Make sure there are no dangling instances or device indexes
- 	These checks *should* be unneccesary, remove once battle-tested */
+	These checks *should* be unneccesary, remove once battle-tested */
 	for (int i = 0; i < MAX_CONTROLLERS; i++) {
 		if (deviceMap[i] == WIIU_DEVICE_INVALID && instanceMap[i] != -1) {
 
@@ -464,37 +466,44 @@ static void WIIU_JoystickUpdate(SDL_Joystick *joystick)
 
 		VPADStatus vpad;
 		VPADReadError error;
-		VPADTouchData tpdata;
-		VPADRead(VPAD_CHAN_0, &vpad, 1, &error);
+		int32_t read;
+		
+		read = VPADRead(VPAD_CHAN_0, &vpad, 1, &error);
 		if (error == VPAD_READ_INVALID_CONTROLLER) {
 			/* Gamepad disconnected! */
 			SDL_PrivateJoystickRemoved(joystick->instance_id);
 			/* Unlink Gamepad, device_index, instance_id */
 			WIIU_RemoveDevice(WIIU_DEVICE_GAMEPAD);
 			return;
-		} else if (error != VPAD_READ_SUCCESS) {
+		} else if (read != 1 || error != VPAD_READ_SUCCESS) {
 			return;
 		}
 
 		/* touchscreen */
-		VPADGetTPCalibratedPoint(VPAD_CHAN_0, &tpdata, &vpad.tpNormal);
-		if (tpdata.touched) {
+		VPADGetTPCalibratedPoint(VPAD_CHAN_0, &vpad.tpNormal, &vpad.tpNormal);
+
+		if (SDL_WiiUSetSWKBDVPAD(&vpad)) {
+			/* Do not generate SDL events when the swkbd is consuming the input. */
+			return;
+		}
+
+		if (vpad.tpNormal.touched) {
 			SDL_Window *window = WIIU_GetGamepadWindow();
 			if (!last_touched) {
 				/* Send an initial touch */
 				SDL_SendTouch(0, 0, window, SDL_TRUE,
-						(float) tpdata.x / 1280.0f,
-						(float) tpdata.y / 720.0f, 1);
+						(float) vpad.tpNormal.x / 1280.0f,
+						(float) vpad.tpNormal.y / 720.0f, 1);
 			}
 
 			/* Always send the motion */
 			SDL_SendTouchMotion(0, 0, window,
-					(float) tpdata.x / 1280.0f,
-					(float) tpdata.y / 720.0f, 1);
+					(float) vpad.tpNormal.x / 1280.0f,
+					(float) vpad.tpNormal.y / 720.0f, 1);
 
 			/* Update old values */
-			last_touch_x = tpdata.x;
-			last_touch_y = tpdata.y;
+			last_touch_x = vpad.tpNormal.x;
+			last_touch_y = vpad.tpNormal.y;
 			last_touched = 1;
 		} else if (last_touched) {
 			SDL_Window *window = WIIU_GetGamepadWindow();
@@ -544,14 +553,21 @@ static void WIIU_JoystickUpdate(SDL_Joystick *joystick)
 		WPADExtensionType ext;
 		KPADStatus kpad;
 		int32_t err;
+		int32_t read;
 
 		if (WPADProbe(WIIU_WPAD_CHAN(wiiu_device), &ext) != 0) {
 			/* Do nothing, we'll catch it in Detect() */
 			return;
 		}
 
-		KPADReadEx(WIIU_WPAD_CHAN(wiiu_device), &kpad, 1, &err);
-		if (err != KPAD_ERROR_OK) return;
+		read = KPADReadEx(WIIU_WPAD_CHAN(wiiu_device), &kpad, 1, &err);
+		if (read != 1 || err != KPAD_ERROR_OK)
+			return;
+
+		if (SDL_WiiUSetSWKBDKPAD(WIIU_WPAD_CHAN(wiiu_device), &kpad)) {
+			/* Do not generate SDL events when the swkbd is consuming the input. */
+			return;
+		}
 
 		switch (ext) {
 		case WPAD_EXT_CORE:
@@ -662,3 +678,11 @@ SDL_JoystickDriver SDL_WIIU_JoystickDriver =
 };
 
 #endif
+
+/*
+ * Local Variables:
+ * indent-tabs-mode: t
+ * tab-width: 8
+ * c-basic-offset: 8
+ * End:
+ */

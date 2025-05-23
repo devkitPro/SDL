@@ -240,6 +240,9 @@ endif()
 if(WIIU)
   # Prefer coreinit atomics on Wii U due to a hardware bug in load-exclusive and store-exclusive instructions
   set(OPT_DEF_GCC_ATOMICS OFF)
+  # Needed for nn::swkbd API
+  set(LINKER_LANGUAGE CXX)
+  set (CMAKE_CXX_STANDARD 23)
 endif()
 
 # Default option knobs
@@ -2920,14 +2923,14 @@ elseif(WIIU)
   if(SDL_VIDEO)
     set(SDL_VIDEO_DRIVER_WIIU 1)
     set(SDL_VIDEO_RENDER_WIIU 1)
-    file(GLOB WIIU_VIDEO_SOURCES ${SDL2_SOURCE_DIR}/src/video/wiiu/*.c)
+    file(GLOB WIIU_VIDEO_SOURCES
+        ${SDL2_SOURCE_DIR}/src/video/wiiu/*.c
+        ${SDL2_SOURCE_DIR}/src/video/wiiu/*.cpp)
     set(SOURCE_FILES ${SOURCE_FILES} ${WIIU_VIDEO_SOURCES})
     set(HAVE_SDL_VIDEO TRUE)
   endif()
 
-  list(APPEND EXTRA_LIBS
-      wut
-    )
+  list(APPEND EXTRA_LIBS stdc++ wut)
 endif()
 
 if(HAVE_VULKAN AND NOT SDL_LOADSO)
