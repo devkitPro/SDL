@@ -38,6 +38,7 @@ struct WIIU_VideoData
 	SDL_bool handleProcUI;
 
 	SDL_bool hasForeground;
+	SDL_bool enteringBackground;
 
 	void *commandBufferPool;
 
