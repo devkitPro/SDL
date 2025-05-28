@@ -26,6 +26,10 @@
 #include "SDL_keycode.h"
 #include "SDL_events.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Initialize the keyboard subsystem */
 extern int SDL_KeyboardInit(void);
 
@@ -83,6 +87,10 @@ extern char *SDL_UCS4ToUTF8(Uint32 ch, char *dst);
 
 /* Toggle on or off pieces of the keyboard mod state. */
 extern void SDL_ToggleModState(const SDL_Keymod modstate, const SDL_bool toggle);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SDL_keyboard_c_h_ */
 

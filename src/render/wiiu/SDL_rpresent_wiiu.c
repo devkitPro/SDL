@@ -26,6 +26,7 @@
 
 #include "../SDL_sysrender.h"
 #include "SDL_render_wiiu.h"
+#include "../../video/wiiu/SDL_wiiu_swkbd.h"
 
 #include <gx2/registers.h>
 #include <gx2/state.h>
@@ -48,11 +49,34 @@ int WIIU_SDL_SetVSync(SDL_Renderer * renderer, const int vsync)
     return 0;
 }
 
+#define WIIU_FIX_SWKBD_GAMMA
+
 int WIIU_SDL_RenderPresent(SDL_Renderer * renderer)
 {
     WIIU_RenderData *data = (WIIU_RenderData *) renderer->driverdata;
     WIIU_TextureData *tdata = (WIIU_TextureData *) data->windowTex.driverdata;
     Uint32 flags = SDL_GetWindowFlags(renderer->window);
+
+    if (WIIU_SWKBD_IsScreenKeyboardShown(NULL, renderer->window)) {
+        GX2SetContextState(NULL);
+#ifdef WIIU_FIX_SWKBD_GAMMA
+        if (tdata->cbuf.surface.format == GX2_SURFACE_FORMAT_UNORM_R8_G8_B8_A8) {
+            GX2SurfaceFormat old_format = tdata->cbuf.surface.format;
+            tdata->cbuf.surface.format = GX2_SURFACE_FORMAT_SRGB_R8_G8_B8_A8;
+            GX2InitColorBufferRegs(&tdata->cbuf);
+            GX2SetColorBuffer(&tdata->cbuf, GX2_RENDER_TARGET_0);
+            WIIU_SWKBD_Draw(renderer->window);
+            tdata->cbuf.surface.format = old_format;
+            GX2InitColorBufferRegs(&tdata->cbuf);
+            GX2SetColorBuffer(&tdata->cbuf, GX2_RENDER_TARGET_0);
+        } else {
+            WIIU_SWKBD_Draw(renderer->window);
+        }
+#else
+        WIIU_SWKBD_Draw(renderer->window);
+#endif
+
+    }
 
     /* Only render to TV if the window is *not* drc-only */
     if (!(flags & SDL_WINDOW_WIIU_GAMEPAD_ONLY)) {
