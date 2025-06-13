@@ -126,6 +126,7 @@ typedef enum
     SDL_WINDOW_KEYBOARD_GRABBED = 0x00100000,   /**< window has grabbed keyboard input */
     SDL_WINDOW_WIIU_GAMEPAD_ONLY = 0x01000000,      /**< Wii U: window must be drawn only on the Gamepad */
     SDL_WINDOW_WIIU_TV_ONLY      = 0x02000000,      /**< Wii U: window must be drawn only on the TV */
+    SDL_WINDOW_WIIU_PREVENT_SWAP = 0x04000000,      /**< Wii U: window will not swap scanbuffers on present */
     SDL_WINDOW_VULKAN           = 0x10000000,   /**< window usable for Vulkan surface */
     SDL_WINDOW_METAL            = 0x20000000,   /**< window usable for Metal view */
 
