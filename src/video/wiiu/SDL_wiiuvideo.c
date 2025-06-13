@@ -222,9 +222,15 @@ static int WIIU_VideoInit(_THIS)
 	switch(GX2GetSystemTVScanMode()) {
 	case GX2_TV_SCAN_MODE_480I:
 	case GX2_TV_SCAN_MODE_480P:
-		videodata->tvRenderMode = GX2_TV_RENDER_MODE_WIDE_480P;
-		videodata->tvWidth = 854;
-		videodata->tvHeight = 480;
+		if (GX2GetSystemTVAspectRatio() == GX2_ASPECT_RATIO_16_9) {
+			videodata->tvRenderMode = GX2_TV_RENDER_MODE_WIDE_480P;
+			videodata->tvWidth = 854;
+			videodata->tvHeight = 480;
+		} else {
+			videodata->tvRenderMode = GX2_TV_RENDER_MODE_STANDARD_480P;
+			videodata->tvWidth = 640;
+			videodata->tvHeight = 480;
+		}
 		break;
 	case GX2_TV_SCAN_MODE_1080I:
 	case GX2_TV_SCAN_MODE_1080P:
