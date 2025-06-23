@@ -89,6 +89,7 @@ struct WIIU_RenderData
     OSTime lastFrameTimestamp;
     SDL_Texture windowTex;
     WIIU_DrawState drawState;
+    WIIU_TextureData *curTarget;
 };
 
 struct WIIU_TextureData

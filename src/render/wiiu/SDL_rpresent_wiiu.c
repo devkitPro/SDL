@@ -80,6 +80,8 @@ int WIIU_SDL_RenderPresent(SDL_Renderer * renderer)
         tvDrcEnabled = SDL_TRUE;
     }
 
+    data->curTarget = NULL;
+
     return 0;
 }
 
