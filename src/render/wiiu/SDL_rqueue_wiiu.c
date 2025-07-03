@@ -374,7 +374,7 @@ int WIIU_SDL_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, vo
     }
 
     /* make sure we're using the correct renderer ctx */
-    WIIU_SDL_SetRenderTarget(renderer, renderer->target);
+    GX2SetContextState(data->ctx);
 
     data->drawState.target = renderer->target;
     if (!data->drawState.target) {
