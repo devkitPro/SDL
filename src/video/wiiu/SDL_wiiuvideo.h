@@ -47,6 +47,7 @@ struct WIIU_VideoData
 	uint32_t tvHeight;
 	void *tvScanBuffer;
 	uint32_t tvScanBufferSize;
+	uint32_t prevSwapInterval;
 
 	GX2DrcRenderMode drcRenderMode;
 	void *drcScanBuffer;
