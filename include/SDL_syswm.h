@@ -148,7 +148,8 @@ typedef enum
     SDL_SYSWM_OS2,
     SDL_SYSWM_HAIKU,
     SDL_SYSWM_KMSDRM,
-    SDL_SYSWM_RISCOS
+    SDL_SYSWM_RISCOS,
+    SDL_SYSWM_WIIU
 } SDL_SYSWM_TYPE;
 
 /**
@@ -211,6 +212,11 @@ struct SDL_SysWMmsg
             MPARAM mp1;                 /**< The first first message parameter */
             MPARAM mp2;                 /**< The second first message parameter */
         } os2;
+#endif
+#if defined(SDL_VIDEO_DRIVER_WIIU)
+        struct {
+            unsigned event;
+        } wiiu;
 #endif
         /* Can't have an empty union */
         int dummy;

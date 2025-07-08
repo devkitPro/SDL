@@ -24,6 +24,10 @@
 
 #include "../SDL_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Useful functions and variables from SDL_events.c */
 #include "SDL_events.h"
 #include "SDL_thread.h"
@@ -57,6 +61,11 @@ extern void SDL_SendPendingSignalEvents(void);
 
 extern int SDL_QuitInit(void);
 extern void SDL_QuitQuit(void);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* SDL_events_c_h_ */
 

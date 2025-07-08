@@ -612,6 +612,262 @@ extern DECLSPEC int SDLCALL SDL_GDKGetTaskQueue(XTaskQueueHandle * outTaskQueue)
 
 #endif
 
+/* Platform specific functions for Wii U */
+#if defined(__WIIU__)
+typedef enum SDL_WiiUSysWMEventType {
+    /** Sent before any text input event. */
+    SDL_WIIU_SYSWM_SWKBD_OK_START_EVENT = 1,
+    /** Sent after all text input events. */
+    SDL_WIIU_SYSWM_SWKBD_OK_FINISH_EVENT,
+    /** Sent after the swkbd was canceled. */
+    SDL_WIIU_SYSWM_SWKBD_CANCEL_EVENT
+} SDL_WiiUSysWMEventType;
+
+/**
+ * Disable the swkbd.
+ *
+ * Use this function if you only want text input from a physical USB keyboard.
+ *
+ * \param enabled `SDL_FALSE` if you do not want the swkbd to show up after calling
+ * `SDL_StartTextInput()`.
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDEnabled(SDL_bool enabled);
+
+/**
+ * Sets a `nn::swkbd::CreateArg` object that will be used to create the swkbd.
+ * 
+ * You don't need to set `arg->fsClient` nor `arg->workMemory`, these will be
+ * allocated if they are `NULL`, when the swkbd is first shown.
+ *
+ * \param arg Pointer to a persistent `nn::swkbd::CreateArg` object, or `NULL` to use the
+ * default.
+ *
+ * \note
+ * The swkbd will be re-initialized after calling this function.
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDCreateArg(void * arg);
+
+/**
+ * Sets a `nn::swkbd::AppearArg` object that will be used every time the swkbd is shown.
+ * You don't have to call this function again if you update the argument's content.
+ *
+ * \param arg Pointer to a persistent `nn::swkbd::AppearArg` object, or `NULL` to use the
+ * default.
+ *
+ * \note
+ * When a `nn::swkbd::AppearArg` argument is used, all related customization options
+ * are ignored.
+ *
+ * \sa SDL_WiiUSetSWKBDHighlightInitialText
+ * \sa SDL_WiiUSetSWKBDHintText
+ * \sa SDL_WiiUSetSWKBDInitialText
+ * \sa SDL_WiiUSetSWKBDKeyboardMode
+ * \sa SDL_WiiUSetSWKBDOKLabel
+ * \sa SDL_WiiUSetSWKBDPasswordMode
+ * \sa SDL_WiiUSetSWKBDShowCopyPasteButtons
+ * \sa SDL_WiiUSetSWKBDShowWordSuggestions
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDAppearArg(const void * arg);
+
+/**
+ * Select the swkbd keyboard mode.
+ *
+ * \sa SDL_WiiUSetSWKBDKeyboardMode
+ */
+typedef enum SDL_WiiUSWKBDKeyboardMode {
+    /** Full keyboard. */
+    SDL_WIIU_SWKBD_KEYBOARD_MODE_FULL,
+    /** Numeric keyboard. */
+    SDL_WIIU_SWKBD_KEYBOARD_MODE_NUMPAD,
+    /** Restricted keyboard (only letters, numbers and symbols.) */
+    SDL_WIIU_SWKBD_KEYBOARD_MODE_RESTRICTED,
+    /** NNID keyboard. */
+    SDL_WIIU_SWKBD_KEYBOARD_MODE_NNID
+} SDL_WiiUSWKBDKeyboardMode;
+
+/**
+ * Sets the swkbd's keyboard mode.
+ *
+ * \param mode One of SDL_WiiUSWKBDKeyboardMode. The default is
+ * `SDL_WIIU_SWKBD_KEYBOARD_MODE_FULL`.
+ *
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDKeyboardMode(SDL_WiiUSWKBDKeyboardMode mode);
+
+/**
+ * Sets the label for the swkbd's "OK" button.
+ *
+ * \param label String for the "OK" button, encoded in UTF-8, or `NULL` to use the
+ * default.
+ *
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDOKLabel(const char * label);
+
+/**
+ * Sets the swkbd's word suggestions option.
+ *
+ * \param show `SDL_TRUE` to enable word suggestions. The default is `SDL_TRUE`.
+ *
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDShowWordSuggestions(SDL_bool show);
+
+/**
+ * Sets the swkbd's initial text.
+ *
+ * \param text String for the initial text, encoded in UTF-8, or `NULL` to use the
+ * default (no initial text.)
+ *
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDInitialText(const char * text);
+
+/**
+ * Sets the swkbd's hint text.
+ *
+ * \param text String for the hint text, encoded in UTF-8, or `NULL` to use the default
+ * (no hint.)
+ *
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDHintText(const char * text);
+
+/**
+ * Controls how to display passwwords in the swkbd when in password mode.
+ */
+typedef enum SDL_WiiUSWKBDPasswordMode {
+    SDL_WIIU_SWKBD_PASSWORD_MODE_SHOW, /**< Show password. */
+    SDL_WIIU_SWKBD_PASSWORD_MODE_HIDE, /**< Hide password. */
+    SDL_WIIU_SWKBD_PASSWORD_MODE_FADE  /**< Hide password after 1 second. */
+} SDL_WiiUSWKBDPasswordMode;
+
+/**
+ * Sets the swkbd's password mode.
+ *
+ * \param mode One of of the SDL_WiiUSWKBDPasswordMode values. The default is
+ * `SDL_WIIU_SWKBD_PASSWORD_MODE_SHOW`.
+ *
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ * \sa SDL_WiiUSetSWKBDKeyboardMode
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDPasswordMode(SDL_WiiUSWKBDPasswordMode mode);
+
+/**
+ * Sets whether to highlight (select) the swkbd's initial text.
+ *
+ * \param highlight `SDL_TRUE` to highlight the initial text. The default is `SDL_FALSE`.
+
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDHighlightInitialText(SDL_bool highlight);
+
+/**
+ * Sets the swkbd's copy-paste button option.
+ *
+ * \param show `SDL_TRUE` to show copy-paste buttons. The default is `SDL_FALSE`.
+ *
+ * \note
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDShowCopyPasteButtons(SDL_bool show);
+
+/**
+ * Sets the swkbd's built-in rendering of the Wii remote pointer.
+ *
+ * \param draw `SDL_TRUE` to let the swkbd draw its own Wii remote pointer. The default is
+ * `SDL_TRUE`.
+ *
+ * This option is reset to the default value after the swkbd is shown, and is ignored if
+ * you use SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument.
+ *
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDDrawWiiPointer(SDL_bool draw);
+
+/**
+ * Sets the swkbd's locale (region and language.)
+ *
+ * \param locale String representing the intended keyboard region and language, using
+ * Unix-style locale format (e.g. `"en_US"`, `"fr_CA"`, `ja_JP`, `"en"`.) Set to `NULL` to
+ * use the system region and language. The default is `NULL`.
+ *
+ * \note
+ * The swkbd will be re-initialized after calling this function.
+ *
+ * \note
+ * Calling SDL_WiiUSetSWKBDCreateArg with a non-`NULL` argument will override the region.
+ *
+ * \note
+ * Calling SDL_WiiUSetSWKBDAppearArg with a non-`NULL` argument will override the
+ * language.
+ *
+ * \sa SDL_WiiUSetSWKBDCreateArg
+ * \sa SDL_WiiUSetSWKBDAppearArg
+ */
+extern DECLSPEC void SDLCALL SDL_WiiUSetSWKBDLocale(const char * locale);
+
+/**
+ * Sends VPAD input to the swkbd.
+ *
+ * Call this function at every frame if your application calls `VPADRead()` instead of
+ * using the SDL game controller subsystem.
+ *
+ * \param vpad Pointer to a `VPADStatus` object.
+ * \returns `SDL_TRUE` if the swkbd is visible and is going to use the input.
+ *
+ * \note
+ * The touch point in `tpNormal` should contain calibrated point, by calling
+ * `VPADGetTPCalibratedPoint()`, prior to calling this function.
+ */
+extern DECLSPEC SDL_bool SDLCALL SDL_WiiUSetSWKBDVPAD(const void * vpad);
+
+/**
+ * Sends KPAD input to the swkbd.
+ *
+ * Call this function at every frame if you call `KPADRead()` or `KPADReadEx()` in your
+ * application, instead of using the SDL game controller subsystem.
+ *
+ * \param channel Number of channel.
+ * \param kpad Pointer to a `KPADStatus` object.
+ * \returns `SDL_TRUE` if the swkbd is visible and is going to use the input.
+ */
+extern DECLSPEC SDL_bool SDLCALL SDL_WiiUSetSWKBDKPAD(int channel, const void * kpad);
+
+#endif /* Wii U */
+
 /* Ends C function definitions when using C++ */
 #ifdef __cplusplus
 }
