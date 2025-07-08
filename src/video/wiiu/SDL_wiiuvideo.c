@@ -56,6 +56,7 @@
 #include <gx2/state.h>
 #include <gx2r/mem.h>
 #include <gx2r/surface.h>
+#include <gx2/swap.h>
 
 #define DRC_SCREEN_WIDTH    854
 #define DRC_SCREEN_HEIGHT   480
@@ -120,6 +121,9 @@ static int WIIU_ForegroundAcquired(_THIS)
 		window = window->next;
 	}
 
+	// Restore V-Sync state
+	GX2SetSwapInterval(videodata->prevSwapInterval);
+
 	return 0;
 }
 
@@ -134,6 +138,11 @@ static int WIIU_ForegroundReleased(_THIS)
 
 	videodata = (WIIU_VideoData *) _this->driverdata;
 	window = _this->windows;
+
+	// To avoid the black screen problem after resume when swap interval is 0,
+	// remember it, and restore when entering back the foreground
+	videodata->prevSwapInterval = GX2GetSwapInterval();
+	GX2SetSwapInterval(1);
 
 	// make sure the GPU is done drawing
 	GX2DrawDone();
@@ -168,6 +177,11 @@ static int WIIU_ForegroundReleased(_THIS)
 		}
 
 		window = window->next;
+	}
+
+	if (videodata->prevSwapInterval == 0) {
+		/* Do that again to avoid a short black frame after resume */
+		GX2SwapScanBuffers();
 	}
 
 	WIIU_GfxHeap_MEM1Destroy();
