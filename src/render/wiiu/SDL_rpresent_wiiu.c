@@ -63,8 +63,11 @@ int WIIU_SDL_RenderPresent(SDL_Renderer * renderer)
         GX2CopyColorBufferToScanBuffer(&tdata->cbuf, GX2_SCAN_TARGET_DRC);
     }
 
-    /* Swap buffers */
-    GX2SwapScanBuffers();
+    /* Swap buffers if the window doesn't prevent it */
+    if (!(flags & SDL_WINDOW_WIIU_PREVENT_SWAP)) {
+        GX2SwapScanBuffers();
+    }
+
     GX2Flush();
 
     /* Restore SDL context state */
