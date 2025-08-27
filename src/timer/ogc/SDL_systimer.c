@@ -53,12 +53,12 @@ Uint64 SDL_GetTicks64(void)
 
 Uint64 SDL_GetPerformanceCounter(void)
 {
-    return SDL_GetTicks64();
+    return gettime();
 }
 
 Uint64 SDL_GetPerformanceFrequency(void)
 {
-    return 1000;
+    return secs_to_ticks(1);
 }
 
 void SDL_Delay(Uint32 ms)

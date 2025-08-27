@@ -40,7 +40,6 @@
 typedef struct
 {
     SDL_BlendMode current_blend_mode;
-    GXColor clear_color;
     int ops_after_present;
     bool vsync;
     u8 efb_pixel_format;
@@ -67,8 +66,6 @@ static void OGC_WindowEvent(SDL_Renderer *renderer, const SDL_WindowEvent *event
 
 static void set_blend_mode_real(SDL_Renderer *renderer, SDL_BlendMode blend_mode)
 {
-    OGC_RenderData *data = renderer->driverdata;
-
     switch (blend_mode) {
     case SDL_BLENDMODE_NONE:
         GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
@@ -88,21 +85,19 @@ static void set_blend_mode_real(SDL_Renderer *renderer, SDL_BlendMode blend_mode
     default:
         return;
     }
-
-    data->current_blend_mode = blend_mode;
 }
 
 static inline void OGC_SetBlendMode(SDL_Renderer *renderer, SDL_BlendMode blend_mode)
 {
     OGC_RenderData *data = renderer->driverdata;
 
-    if (data->ops_after_present > 0 &&
-        blend_mode == data->current_blend_mode) {
+    if (blend_mode == data->current_blend_mode) {
         /* Nothing to do */
         return;
     }
 
     set_blend_mode_real(renderer, blend_mode);
+    data->current_blend_mode = blend_mode;
 }
 
 static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
@@ -111,6 +106,10 @@ static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
 
     OGC_load_texture(ogc_tex->texels, texture->w, texture->h,
                      ogc_tex->format, SDL_ScaleModeNearest);
+    OGC_SetBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+    /* The viewport is reset when OGC_SetRenderTarget() returns. */
+    OGC_set_viewport(0, 0, texture->w, texture->h);
 
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
@@ -119,9 +118,10 @@ static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
     GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
     GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_U8, 0);
     GX_SetNumTexGens(1);
+    GX_SetNumChans(0);
 
     GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
-    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
     GX_SetTevOp(GX_TEVSTAGE0, GX_REPLACE);
     GX_SetNumTevStages(1);
 
@@ -137,7 +137,7 @@ static void load_efb_from_texture(SDL_Renderer *renderer, SDL_Texture *texture)
     GX_End();
 }
 
-static void save_efb_to_texture(SDL_Texture *texture)
+static void save_efb_to_texture(SDL_Texture *texture, bool must_clear)
 {
     OGC_TextureData *ogc_tex = texture->driverdata;
     u32 texture_size;
@@ -148,7 +148,7 @@ static void save_efb_to_texture(SDL_Texture *texture)
 
     GX_SetTexCopySrc(0, 0, texture->w, texture->h);
     GX_SetTexCopyDst(texture->w, texture->h, ogc_tex->format, GX_FALSE);
-    GX_CopyTex(ogc_tex->texels, GX_TRUE);
+    GX_CopyTex(ogc_tex->texels, must_clear ? GX_TRUE : GX_FALSE);
     GX_PixModeSync();
 }
 
@@ -233,7 +233,7 @@ static void OGC_SetTextureScaleMode(SDL_Renderer *renderer,
      * loading it in OGC_load_texture(). */
 }
 
-static SDL_Texture *create_efb_texture(OGC_RenderData *data, SDL_Texture *target)
+static SDL_Texture *create_efb_texture(OGC_RenderData *data, SDL_Window *window)
 {
     /* Note: we do return a SDL_Texture, but not via SDL's API, since that does
      * a bunch of other stuffs we don't care about. We create this texture for
@@ -248,10 +248,10 @@ static SDL_Texture *create_efb_texture(OGC_RenderData *data, SDL_Texture *target
     ogc_tex = SDL_calloc(1, sizeof(OGC_TextureData));
     if (!ogc_tex) goto fail_ogc_tex_alloc;
 
-    ogc_tex->format = data->efb_pixel_format == GX_PF_RGB565_Z16 ?
-        GX_TF_RGB565 : GX_TF_RGBA8;
-    texture->w = target->w;
-    texture->h = target->h;
+    ogc_tex->format = data->efb_pixel_format == GX_PF_RGBA6_Z24 ?
+        GX_TF_RGBA8 : GX_TF_RGB565;
+    texture->w = window->w;
+    texture->h = window->h;
     texture_size = GX_GetTexBufferSize(texture->w, texture->h, ogc_tex->format,
                                        GX_FALSE, 0);
     ogc_tex->texels = memalign(32, texture_size);
@@ -274,24 +274,25 @@ static int OGC_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture)
     OGC_RenderData *data = renderer->driverdata;
     u8 desired_efb_pixel_format = GX_PF_RGB8_Z24;
 
+    if (data->render_target) {
+        save_efb_to_texture(data->render_target, false);
+    } else if (data->ops_after_present > 0) {
+        /* Save the current EFB contents if we already drew something onto
+         * it. We'll restore it later, when the rendering target is reset
+         * to NULL (the screen). */
+        if (!data->saved_efb_texture)
+            data->saved_efb_texture = create_efb_texture(data, renderer->window);
+        save_efb_to_texture(data->saved_efb_texture, false);
+    }
+
     if (texture) {
         if (texture->w > MAX_EFB_WIDTH || texture->h > MAX_EFB_HEIGHT) {
-            return SDL_SetError("Render target bigger than EFB");
-        }
-
-        if (data->ops_after_present > 0) {
-            /* Save the current EFB contents if we already drew something onto
-             * it. We'll restore it later, when the rendering target is reset
-             * to NULL (the screen). */
-            data->saved_efb_texture = create_efb_texture(data, texture);
-            save_efb_to_texture(data->saved_efb_texture);
+            return SDL_SetError("Render target (%dx%d) bigger than EFB", texture->w, texture->h);
         }
 
         if (SDL_ISPIXELFORMAT_ALPHA(texture->format)) {
             desired_efb_pixel_format = GX_PF_RGBA6_Z24;
         }
-    } else if (data->render_target) {
-        save_efb_to_texture(data->render_target);
     }
 
     data->render_target = texture;
@@ -301,15 +302,13 @@ static int OGC_SetRenderTarget(SDL_Renderer *renderer, SDL_Texture *texture)
         GX_SetPixelFmt(data->efb_pixel_format, GX_ZC_LINEAR);
     }
 
-    /* Restore the EFB to how it was before the we started to render to a
-     * texture. */
-    if (!texture && data->saved_efb_texture) {
+    if (texture) {
+        load_efb_from_texture(renderer, texture);
+    } else if (data->saved_efb_texture) {
+        /* Restore the EFB to how it was before the we started to render to a
+         * texture. */
         load_efb_from_texture(renderer, data->saved_efb_texture);
-        /* Flush the draw operation before destroying the texture */
-        GX_DrawDone();
-        OGC_DestroyTexture(renderer, data->saved_efb_texture);
-        SDL_free(data->saved_efb_texture);
-        data->saved_efb_texture = NULL;
+        /* We don't free data->saved_efb_texture, it will be reused */
     }
 
     return 0;
@@ -439,9 +438,11 @@ static int OGC_RenderSetClipRect(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
         GX_SetScissor(renderer->viewport.x + rect->x,
                       renderer->viewport.y + rect->y,
                       rect->w, rect->h);
-        GX_SetClipMode(GX_CLIP_ENABLE);
     } else {
-        GX_SetClipMode(GX_CLIP_DISABLE);
+        GX_SetScissor(renderer->viewport.x,
+                      renderer->viewport.y,
+                      renderer->viewport.w,
+                      renderer->viewport.h);
     }
 
     return 0;
@@ -457,22 +458,35 @@ static int OGC_RenderClear(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
         cmd->data.color.b,
         cmd->data.color.a
     };
+    int16_t x1 = 0;
+    int16_t y1 = 0;
+    int16_t x2 = renderer->window->w;
+    int16_t y2 = renderer->window->h;
+    OGC_set_viewport(0, 0, renderer->window->w, renderer->window->h);
+    OGC_SetBlendMode(renderer, SDL_BLENDMODE_NONE);
 
-    /* If nothing has been drawn after Present, and if the clear color has not
-     * changed, there's no need to do anything here. */
-    if (data->ops_after_present == 0 &&
-        GX_COLOR_AS_U32(c) == GX_COLOR_AS_U32(data->clear_color)) {
-        return 0;
-    }
+    GX_ClearVtxDesc();
+    GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XY, GX_S16, 0);
+    GX_SetTevColor(GX_TEVREG0, c);
+    GX_SetTevColorIn(GX_TEVSTAGE0, GX_CC_C0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO);
+    GX_SetTevAlphaIn(GX_TEVSTAGE0, GX_CA_A0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO);
+    GX_SetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GX_SetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
+    GX_SetNumTevStages(1);
+    GX_SetNumChans(0);
 
-    data->clear_color = c;
-    GX_SetCopyClear(c, GX_MAX_Z24);
-    if (renderer->target) {
-        save_efb_to_texture(renderer->target);
-    } else {
-        GX_CopyDisp(OGC_video_get_xfb(SDL_GetVideoDevice()), GX_TRUE);
-    }
+    GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
+    GX_Position2s16(x1, y1);
+    GX_Position2s16(x2, y1);
+    GX_Position2s16(x2, y2);
+    GX_Position2s16(x1, y2);
+    GX_End();
+    data->ops_after_present++;
 
+    /* Restore the viewport */
+    OGC_set_viewport(renderer->viewport.x, renderer->viewport.y,
+                     renderer->viewport.w, renderer->viewport.h);
     return 0;
 }
 
@@ -513,7 +527,9 @@ static int OGC_RenderGeometry(SDL_Renderer *renderer, void *vertices,
         GX_SetNumTevStages(stage - GX_TEVSTAGE0 + 1);
     } else {
         GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+        GX_SetNumTevStages(1);
     }
+    GX_SetNumChans(1);
 
     GX_Begin(GX_TRIANGLES, GX_VTXFMT0, count);
     for (int i = 0; i < count; i++) {
@@ -538,6 +554,8 @@ int OGC_RenderPrimitive(SDL_Renderer *renderer, u8 primitive,
     OGC_RenderData *data = renderer->driverdata;
     size_t count = cmd->data.draw.count;
     const SDL_FPoint *verts = (SDL_FPoint *)(vertices + cmd->data.draw.first);
+    Mtx mv;
+    bool did_change_matrix = false;
     GXColor c = {
         cmd->data.draw.r,
         cmd->data.draw.g,
@@ -547,6 +565,14 @@ int OGC_RenderPrimitive(SDL_Renderer *renderer, u8 primitive,
 
     data->ops_after_present++;
     OGC_SetBlendMode(renderer, cmd->data.draw.blend);
+
+    if (primitive == GX_LINESTRIP || primitive == GX_POINTS) {
+        float adjustment = 0.5;
+        guMtxIdentity(mv);
+        guMtxTransApply(mv, mv, adjustment, adjustment, 0);
+        GX_LoadPosMtxImm(mv, GX_PNMTX0);
+        did_change_matrix = true;
+    }
 
     /* TODO: optimize state changes. */
     GX_SetTevColor(GX_TEVREG0, c);
@@ -569,9 +595,16 @@ int OGC_RenderPrimitive(SDL_Renderer *renderer, u8 primitive,
 
     /* The last point is not drawn */
     if (primitive == GX_LINESTRIP) {
-        GX_Begin(GX_POINTS, GX_VTXFMT0, 1);
-        GX_Position2f32(verts[count - 1].x, verts[count - 1].y);
+        GX_Begin(GX_POINTS, GX_VTXFMT0, count);
+        for (int i = 0; i < count; i++) {
+            GX_Position2f32(verts[i].x, verts[i].y);
+        }
         GX_End();
+    }
+
+    if (did_change_matrix) {
+        guMtxIdentity(mv);
+        GX_LoadPosMtxImm(mv, GX_PNMTX0);
     }
 
     return 0;
@@ -657,6 +690,12 @@ static void OGC_DestroyRenderer(SDL_Renderer *renderer)
     OGC_RenderData *data = renderer->driverdata;
 
     if (data) {
+        GX_DrawDone();
+        if (data->saved_efb_texture) {
+            OGC_DestroyTexture(renderer, data->saved_efb_texture);
+            SDL_free(data->saved_efb_texture);
+        }
+
         SDL_free(data);
     }
 

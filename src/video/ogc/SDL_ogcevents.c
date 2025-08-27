@@ -84,6 +84,10 @@ static void pump_ir_events(_THIS)
             }
         }
     }
+
+    if (OGC_prep_draw_cursor(_this)) {
+        OGC_video_flip(_this, false);
+    }
 }
 #endif
 
