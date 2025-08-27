@@ -296,14 +296,17 @@ int OGC_VideoInit(_THIS)
     VIDEO_Init();
 
     vmode = VIDEO_GetPreferredMode(NULL);
-    vmode->viWidth = VI_MAX_WIDTH_NTSC; // VI_MAX_WIDTH is the same for all regions
-    // set Center point
-    if (VI_FORMAT_FROM_MODE(vmode->viTVMode) == VI_PAL) {
-        vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
-        vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
-    } else {
-        vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
-        vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
+    if(OGC_get_aspect_ratio() != (4.0f / 3.0f))
+    {
+        vmode->viWidth = VI_MAX_WIDTH_NTSC; // VI_MAX_WIDTH is the same for all regions
+        // set Center point
+        if (VI_FORMAT_FROM_MODE(vmode->viTVMode) == VI_PAL) {
+            vmode->viXOrigin = (VI_MAX_WIDTH_PAL - vmode->viWidth) / 2;
+            vmode->viYOrigin = (VI_MAX_HEIGHT_PAL - vmode->viHeight) / 2;
+        } else {
+            vmode->viXOrigin = (VI_MAX_WIDTH_NTSC - vmode->viWidth) / 2;
+            vmode->viYOrigin = (VI_MAX_HEIGHT_NTSC - vmode->viHeight) / 2;
+        }
     }
 
     videodata->gp_fifo = memalign(32, DEFAULT_FIFO_SIZE);
