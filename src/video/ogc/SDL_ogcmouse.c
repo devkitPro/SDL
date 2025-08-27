@@ -29,7 +29,6 @@
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
 #include "SDL_ogcpixels.h"
-#include "SDL_ogcvideo.h"
 
 #include "../SDL_sysvideo.h"
 #include "../../render/SDL_sysrender.h"
@@ -311,10 +310,9 @@ void OGC_draw_cursor(_THIS)
 
     OGC_load_texture(curdata->texels, curdata->w, curdata->h, GX_TF_RGBA8,
                      SDL_ScaleModeNearest);
-  
-    guMtxIdentity(mv);
-    guMtxScaleApply(mv, mv, screen_h / 480.0f, screen_h / 480.0f, 1.0f);
 
+    guMtxIdentity(mv);
+    guMtxScaleApply(mv, mv, screen_w / 640.0f, screen_h / 480.0f, 1.0f);
     if (angle != 0.0f) {
         Mtx rot;
         guMtxRotDeg(rot, 'z', angle);
