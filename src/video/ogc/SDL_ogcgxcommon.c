@@ -44,7 +44,7 @@ static const f32 tex_pos[] __attribute__((aligned(32))) = {
 float OGC_get_aspect_ratio()
 {
     const char *ratioString;
-    float w, h;
+    unsigned int w, h = 0;
     ratioString = getenv("SDL_OGC_ASPECT_RATIO");
 
     if(ratioString == NULL) {
@@ -53,8 +53,10 @@ float OGC_get_aspect_ratio()
             return 16.0f / 9.0f;
     #endif
         return 4.0f / 3.0f;
-    } else if(sscanf(ratioString, "%f:%f", w, h) == 2) 
-        return w/h;
+    } else if(sscanf(ratioString, "%u:%u", &w, &h) == 2) 
+        return ((float)w/(float)h);
+    
+    return 4.0f/3.0f;
 }
 
 void OGC_set_viewport(int x, int y, int w, int h)
