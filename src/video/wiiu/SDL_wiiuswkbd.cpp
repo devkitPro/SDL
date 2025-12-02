@@ -41,6 +41,7 @@
 
 using nn::swkbd::LanguageType;
 using nn::swkbd::RegionType;
+using nn::swkbd::KeyboardLayout;
 
 namespace
 {
@@ -416,6 +417,52 @@ namespace
             return *cached_system_region;
         }
 
+        KeyboardLayout
+        get_qwerty_layout(RegionType region,
+                          LanguageType language)
+        {
+            switch (region) {
+                case RegionType::Japan:
+                    return KeyboardLayout::JPN_JP_QWERTY;
+                case RegionType::USA:
+                    switch (language) {
+                        case LanguageType::English:
+                            return KeyboardLayout::USA_EN_QWERTY;
+                        case LanguageType::French:
+                            return KeyboardLayout::USA_FR_QWERTY;
+                        case LanguageType::Spanish:
+                            return KeyboardLayout::USA_ES_QWERTY;
+                        case LanguageType::Portuguese:
+                            return KeyboardLayout::USA_PT_QWERTY;
+                        default:
+                            return KeyboardLayout::LanguageDefault;
+                    }
+                case RegionType::Europe:
+                    switch (language) {
+                        case LanguageType::English:
+                            return KeyboardLayout::EUR_EN_QWERTY;
+                        case LanguageType::French:
+                            return KeyboardLayout::EUR_FR_AZERTY;
+                        case LanguageType::German:
+                            return KeyboardLayout::EUR_DE_QWERTZ;
+                        case LanguageType::Italian:
+                            return KeyboardLayout::EUR_IT_QWERTY;
+                        case LanguageType::Spanish:
+                            return KeyboardLayout::EUR_ES_QWERTY;
+                        case LanguageType::Dutch:
+                            return KeyboardLayout::EUR_NL_QWERTY;
+                        case LanguageType::Portuguese:
+                            return KeyboardLayout::EUR_PT_QWERTY;
+                        case LanguageType::Russian:
+                            return KeyboardLayout::EUR_RU_JCUKEN;
+                        default:
+                            return KeyboardLayout::LanguageDefault;
+                    }
+                default:
+                    return KeyboardLayout::LanguageDefault;
+            }
+        }
+
         std::size_t
         strlen_16(const char16_t *s)
         {
@@ -567,8 +614,6 @@ void WIIU_SWKBD_Calc(void)
         detail::wmMsgFinish.subsystem = SDL_SYSWM_WIIU;
         detail::wmMsgFinish.msg.wiiu.event = SDL_WIIU_SYSWM_SWKBD_OK_FINISH_EVENT;
         SDL_SendSysWMEvent(&detail::wmMsgFinish);
-
-        // WIIU_SWKBD_HideScreenKeyboard(nullptr, nullptr);
     }
 
     if (nn::swkbd::IsDecideCancelButton(nullptr)) {
@@ -577,8 +622,6 @@ void WIIU_SWKBD_Calc(void)
         detail::wmMsgFinish.subsystem = SDL_SYSWM_WIIU;
         detail::wmMsgFinish.msg.wiiu.event = SDL_WIIU_SYSWM_SWKBD_CANCEL_EVENT;
         SDL_SendSysWMEvent(&detail::wmMsgFinish);
-
-        // WIIU_SWKBD_HideScreenKeyboard(nullptr, nullptr);
     }
 }
 
@@ -619,12 +662,18 @@ void WIIU_SWKBD_ShowScreenKeyboard(_THIS, SDL_Window *window)
 
     nn::swkbd::AppearArg &arg = detail::appear::theArg;
     arg = nn::swkbd::AppearArg{}; // reset all values to default
+
     // Set language
     auto [language, country] = detail::parse_locale(detail::swkbdLocale);
     if (auto lang = detail::to_language(language, country))
         arg.keyboardArg.configArg.languageType = *lang;
     else
         arg.keyboardArg.configArg.languageType = detail::get_language_from_system();
+
+    // Choose a QWERTY-ish layout, this seems necessary to activate the correct dictionary.
+    arg.keyboardArg.configArg.keyboardLayout =
+        detail::get_qwerty_layout(detail::create::region.value_or(RegionType::Europe),
+                                  arg.keyboardArg.configArg.languageType);
 
     // Set keyboard mode
     arg.keyboardArg.configArg.keyboardMode = detail::appear::keyboardMode;
