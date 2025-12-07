@@ -418,8 +418,8 @@ namespace
         }
 
         KeyboardLayout
-        get_qwerty_layout(RegionType region,
-                          LanguageType language)
+        get_default_layout(RegionType region,
+                           LanguageType language)
         {
             switch (region) {
                 case RegionType::Japan:
@@ -670,10 +670,10 @@ void WIIU_SWKBD_ShowScreenKeyboard(_THIS, SDL_Window *window)
     else
         arg.keyboardArg.configArg.languageType = detail::get_language_from_system();
 
-    // Choose a QWERTY-ish layout, this seems necessary to activate the correct dictionary.
+    // Choose a default layout, this seems necessary to activate the correct dictionary.
     arg.keyboardArg.configArg.keyboardLayout =
-        detail::get_qwerty_layout(detail::create::region.value_or(RegionType::Europe),
-                                  arg.keyboardArg.configArg.languageType);
+        detail::get_default_layout(detail::create::region.value_or(RegionType::Europe),
+                                   arg.keyboardArg.configArg.languageType);
 
     // Set keyboard mode
     arg.keyboardArg.configArg.keyboardMode = detail::appear::keyboardMode;
