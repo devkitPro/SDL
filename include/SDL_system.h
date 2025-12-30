@@ -614,6 +614,21 @@ extern DECLSPEC int SDLCALL SDL_GDKGetTaskQueue(XTaskQueueHandle * outTaskQueue)
 
 /* Platform specific functions for Wii U */
 #if defined(__WIIU__)
+
+/**
+ * Preprocessor define for the swkbd API version.
+ *
+ * This number should be bumped any time there are changes to the API
+ * to allow programs to retain source-level compatibility whenever
+ * changes are made.
+ *
+ * For example:
+ *   #if SDL_WIIU_SWKBD_API == 1
+ *       SDL_WiiUSetSWKBDEnabled(SDL_FALSE);
+ *   #endif
+ */
+# define SDL_WIIU_SWKBD_API 1
+
 typedef enum SDL_WiiUSysWMEventType {
     /** Sent before any text input event. */
     SDL_WIIU_SYSWM_SWKBD_OK_START_EVENT = 1,
