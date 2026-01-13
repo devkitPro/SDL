@@ -53,6 +53,10 @@
 #define WIIU_DEVICE_MIRRORED 2
 #define WIIU_MAX_DEVICES 3
 
+static int mirroredHandle;
+static int tvHandle;
+static int drcHandle;
+
 static void _WIIUAUDIO_framecallback();
 static SDL_AudioDevice *wiiuDevices[WIIU_MAX_DEVICES];
 static int deviceType;
@@ -84,16 +88,6 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
     }
 
     SDL_zerop(this->hidden);
-
-    /*  Take a quick aside to init the wiiu audio */
-    if (!AXIsInit()) {
-    /*  Init the AX audio engine */
-        AXInitParams initparams = {
-            .renderer = AX_INIT_RENDERER_48KHZ,
-            .pipeline = AX_INIT_PIPELINE_SINGLE,
-        };
-        AXInitWithParams(&initparams);
-    } else printf("DEBUG: AX already up?\n");
 
     if (this->spec.channels < 1) this->spec.channels = 1;
     if (this->spec.channels > WIIU_MAX_VALID_CHANNELS)
@@ -165,7 +159,6 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
         printf("DEBUG: Couldn't allocate deinterleave buffer");
         return SDL_SetError("Couldn't allocate deinterleave buffer");
     }
-
 
     for (int i = 0; i < this->spec.channels; i++) {
     /*  Get a voice, top priority */
@@ -263,11 +256,6 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
     }
 
     wiiuDevices[deviceCount] = this;
-    
-    if (deviceCount < 1) {
-        AXRegisterAppFrameCallback(_WIIUAUDIO_framecallback);
-    }
-    
     deviceCount++;
 
     return 0;
@@ -282,10 +270,6 @@ static void _WIIUAUDIO_ThreadCleanup(OSThread *thread, void *stack) {
 }
 
 static void WIIUAUDIO_DetectDevices(void) {
-    void *drcHandle;
-    void *tvHandle; 
-    void *mirrorHandle;
-
     /* This gets reset later anyways */
     SDL_AudioSpec spec;
 
@@ -295,7 +279,7 @@ static void WIIUAUDIO_DetectDevices(void) {
 
     SDL_CalculateAudioSpec(&spec);
 
-    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_MIRRORED, &spec, &mirrorHandle);
+    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_MIRRORED, &spec, &mirroredHandle);
     SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_TV, &spec, &tvHandle);
     SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_GAMEPAD, &spec, &drcHandle);
 }
@@ -309,13 +293,11 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char *devname) {
 
     deviceType = WIIU_DEVICE_MIRRORED;
 
-    if (devname != NULL) {
-        if (SDL_strcmp(devname, SDL_AUDIO_DEVICE_WIIU_TV) == 0) {
-            deviceType = WIIU_DEVICE_TV;
-        }
-        else if (SDL_strcmp(devname, SDL_AUDIO_DEVICE_WIIU_GAMEPAD) == 0) {
-            deviceType = WIIU_DEVICE_GAMEPAD;
-        }
+    if (this->handle == &tvHandle) {
+        deviceType = WIIU_DEVICE_TV;
+    }
+    else if (this->handle == &drcHandle) {
+        deviceType = WIIU_DEVICE_GAMEPAD;
     }
 
     /* AX functions need to run from the same core.
@@ -499,16 +481,13 @@ static Uint8* WIIUAUDIO_GetDeviceBuf(_THIS) {
 }
 
 static void WIIUAUDIO_CloseDevice(_THIS) {
-    if ((AXIsInit()) && (deviceCount < 1)) {
-        AXDeregisterAppFrameCallback(_WIIUAUDIO_framecallback);
-        for (int i = 0; i < SIZEOF_ARR(this->hidden->voice); i++) {
-            if (this->hidden->voice[i]) {
-                AXFreeVoice(this->hidden->voice[i]);
-                this->hidden->voice[i] = NULL;
-            }
+    for (int i = 0; i < SIZEOF_ARR(this->hidden->voice); i++) {
+        if (this->hidden->voice[i]) {
+            AXFreeVoice(this->hidden->voice[i]);
+            this->hidden->voice[i] = NULL;
         }
-        AXQuit();
     }
+    
     if (this->hidden->mixbufs[0]) free(this->hidden->mixbufs[0]);
     if (this->hidden->deintvbuf) SDL_free(this->hidden->deintvbuf);
     SDL_free(this->hidden);
@@ -524,7 +503,26 @@ static void WIIUAUDIO_ThreadInit(_THIS) {
     OSSetThreadPriority(currentThread, priority);
 }
 
+static void WIIUAUDIO_Deinitialize(void) {
+    if (AXIsInit()) {
+        AXDeregisterAppFrameCallback(_WIIUAUDIO_framecallback);
+        AXQuit();
+    }
+}
+
 static SDL_bool WIIUAUDIO_Init(SDL_AudioDriverImpl *impl) {
+    /*  Take a quick aside to init the wiiu audio */
+    if (!AXIsInit()) {
+    /*  Init the AX audio engine */
+        AXInitParams initparams = {
+            .renderer = AX_INIT_RENDERER_48KHZ,
+            .pipeline = AX_INIT_PIPELINE_SINGLE,
+        };
+        AXInitWithParams(&initparams);
+    } else printf("DEBUG: AX already up?\n");
+
+    AXRegisterAppFrameCallback(_WIIUAUDIO_framecallback);
+    
     impl->DetectDevices = WIIUAUDIO_DetectDevices;
     impl->OpenDevice = WIIUAUDIO_OpenDevice;
     impl->PlayDevice = WIIUAUDIO_PlayDevice;
@@ -532,6 +530,7 @@ static SDL_bool WIIUAUDIO_Init(SDL_AudioDriverImpl *impl) {
     impl->GetDeviceBuf = WIIUAUDIO_GetDeviceBuf;
     impl->CloseDevice = WIIUAUDIO_CloseDevice;
     impl->ThreadInit = WIIUAUDIO_ThreadInit;
+    impl->Deinitialize = WIIUAUDIO_Deinitialize;
 
     impl->OnlyHasDefaultOutputDevice = SDL_FALSE;
 
