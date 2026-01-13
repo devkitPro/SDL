@@ -18,6 +18,7 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
 #include "../../SDL_internal.h"
 
 #if SDL_AUDIO_DRIVER_WIIU
@@ -47,9 +48,15 @@
 
 #define AX_MAIN_AFFINITY OS_THREAD_ATTRIB_AFFINITY_CPU1
 
+#define WIIU_DEVICE_TV 0
+#define WIIU_DEVICE_GAMEPAD 1
+#define WIIU_DEVICE_MIRRORED 2
+#define WIIU_MAX_DEVICES 3
+
 static void _WIIUAUDIO_framecallback();
-static SDL_AudioDevice* cb_this;
-#define cb_hidden cb_this->hidden
+static SDL_AudioDevice *wiiuDevices[WIIU_MAX_DEVICES];
+static int deviceType;
+static int deviceCount;
 
 /*  Some helpers for AX-related math */
 /*  Absolute address to an AXVoiceOffsets offset */
@@ -78,7 +85,7 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
 
     SDL_zerop(this->hidden);
 
-/*  Take a quick aside to init the wiiu audio */
+    /*  Take a quick aside to init the wiiu audio */
     if (!AXIsInit()) {
     /*  Init the AX audio engine */
         AXInitParams initparams = {
@@ -177,16 +184,36 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
         AXSetVoiceVe(this->hidden->voice[i], &vol);
         switch (this->spec.channels) {
             case 1: /* mono */ {
-                AXSetVoiceDeviceMix(this->hidden->voice[i],
-                    AX_DEVICE_TYPE_DRC, 0, mono_mix[i]);
-                AXSetVoiceDeviceMix(this->hidden->voice[i],
-                    AX_DEVICE_TYPE_TV, 0, mono_mix[i]);
+                if (deviceType == WIIU_DEVICE_MIRRORED) {
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_DRC, 0, mono_mix[i]);
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_TV, 0, mono_mix[i]);
+                }
+                else if (deviceType == WIIU_DEVICE_TV) {
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_TV, 0, mono_mix[i]);
+                }
+                else if (deviceType == WIIU_DEVICE_GAMEPAD) {
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_DRC, 0, mono_mix[i]);
+                }
             } break;
             case 2: /* stereo */ {
-                AXSetVoiceDeviceMix(this->hidden->voice[i],
-                    AX_DEVICE_TYPE_DRC, 0, stereo_mix[i]);
-                AXSetVoiceDeviceMix(this->hidden->voice[i],
-                    AX_DEVICE_TYPE_TV, 0, stereo_mix[i]);
+                if (deviceType == WIIU_DEVICE_MIRRORED) {
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_DRC, 0, stereo_mix[i]);
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_TV, 0, stereo_mix[i]);
+                }
+                else if (deviceType == WIIU_DEVICE_TV) {
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_TV, 0, stereo_mix[i]);
+                }
+                else if (deviceType == WIIU_DEVICE_GAMEPAD) {
+                    AXSetVoiceDeviceMix(this->hidden->voice[i],
+                        AX_DEVICE_TYPE_DRC, 0, stereo_mix[i]);
+                }
             } break;
         }
 
@@ -235,8 +262,13 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
         AXVoiceEnd(this->hidden->voice[i]);
     }
 
-    cb_this = this; //wish there was a better way
-    AXRegisterAppFrameCallback(_WIIUAUDIO_framecallback);
+    wiiuDevices[deviceCount] = this;
+    
+    if (deviceCount < 1) {
+        AXRegisterAppFrameCallback(_WIIUAUDIO_framecallback);
+    }
+    
+    deviceCount++;
 
     return 0;
 }
@@ -249,8 +281,42 @@ static void _WIIUAUDIO_ThreadDeallocator(OSThread *thread, void *stack) {
 static void _WIIUAUDIO_ThreadCleanup(OSThread *thread, void *stack) {
 }
 
+static void WIIUAUDIO_DetectDevices(void) {
+    void *drcHandle;
+    void *tvHandle; 
+    void *mirrorHandle;
+
+    /* This gets reset later anyways */
+    SDL_AudioSpec spec;
+
+    spec.channels = WIIU_MAX_VALID_CHANNELS;
+    spec.format = AUDIO_S16MSB;
+    spec.samples = 4096;
+
+    SDL_CalculateAudioSpec(&spec);
+
+    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_MIRRORED, &spec, &mirrorHandle);
+    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_TV, &spec, &tvHandle);
+    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_GAMEPAD, &spec, &drcHandle);
+}
+
 static int WIIUAUDIO_OpenDevice(_THIS, const char *devname) {
     int result;
+
+    if (deviceCount >= WIIU_MAX_DEVICES) {
+        return SDL_SetError("Too many Wii U audio devices! (Max: %d)", WIIU_MAX_DEVICES);
+    }
+
+    deviceType = WIIU_DEVICE_MIRRORED;
+
+    if (devname != NULL) {
+        if (SDL_strcmp(devname, SDL_AUDIO_DEVICE_WIIU_TV) == 0) {
+            deviceType = WIIU_DEVICE_TV;
+        }
+        else if (SDL_strcmp(devname, SDL_AUDIO_DEVICE_WIIU_GAMEPAD) == 0) {
+            deviceType = WIIU_DEVICE_GAMEPAD;
+        }
+    }
 
     /* AX functions need to run from the same core.
        Since we cannot easily change the affinity of the currently running thread, we create a new one if necessary.
@@ -300,78 +366,84 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char *devname) {
 
 /*  Called every 3ms before a frame of audio is rendered. Keep it fast! */
 static void _WIIUAUDIO_framecallback() {
-    int playing_buffer = -1;
-    AXVoiceOffsets offs[6];
-    void* endaddr;
+    for (int deviceIndex = 0; deviceIndex < deviceCount; ++deviceIndex) {
+        SDL_AudioDevice *dev = wiiuDevices[deviceIndex];
+        
+        int playing_buffer = -1;
+        AXVoiceOffsets offs[6];
+        void* endaddr;
 
-    for (int i = 0; i < cb_this->spec.channels; i++) {
-        AXGetVoiceOffsets(cb_hidden->voice[i], &offs[i]);
-    }
+        for (int i = 0; i < dev->spec.channels; i++) {
+            AXGetVoiceOffsets(dev->hidden->voice[i], &offs[i]);
+        }
 
-/*  Figure out which buffer is being played by the hardware */
-    for (int i = 0; i < NUM_BUFFERS; i++) {
-        void* buf = cb_hidden->mixbufs[i];
-        uint32_t startOffset = calc_ax_offset(offs[0], buf);
-        uint32_t endOffset = startOffset + cb_this->spec.samples;
+    /*  Figure out which buffer is being played by the hardware */
+        for (int i = 0; i < NUM_BUFFERS; i++) {
+            void* buf = dev->hidden->mixbufs[i];
+            uint32_t startOffset = calc_ax_offset(offs[0], buf);
+            uint32_t endOffset = startOffset + dev->spec.samples;
 
-    /*  NOTE endOffset definitely needs to be <= (AX plays the sample at
-        endOffset), dunno about startOffset */
-        if (offs[0].currentOffset >= startOffset &&
-            offs[0].currentOffset <= endOffset) {
-            playing_buffer = i;
-            break;
+        /*  NOTE endOffset definitely needs to be <= (AX plays the sample at
+            endOffset), dunno about startOffset */
+            if (offs[0].currentOffset >= startOffset &&
+                offs[0].currentOffset <= endOffset) {
+                playing_buffer = i;
+                break;
+            }
+        }
+
+        if (playing_buffer < 0 || playing_buffer >= NUM_BUFFERS) {
+        /*  UM */
+        /*  Uncomment for craploads of debug info */
+            /*printf("bad buffer %d\n" "|> %08X, %08X-%08X\n" \
+                "0: xxxxxxxx, %08X-%08X (%08X@%08X)\n" \
+                "1: xxxxxxxx, %08X-%08X (%08X@%08X)\n", \
+                playing_buffer, offs.currentOffset, offs.loopOffset, offs.endOffset,
+                calc_ax_offset(offs, (void*)cb_hidden->mixbufs[0]),
+                    calc_ax_offset(offs, (void*)cb_hidden->mixbufs[0] + cb_this->spec.size),
+                    cb_this->spec.size, (void*)cb_hidden->mixbufs[0],
+                calc_ax_offset(offs, (void*)cb_hidden->mixbufs[1]),
+                    calc_ax_offset(offs, (void*)cb_hidden->mixbufs[1] + cb_this->spec.size),
+                    cb_this->spec.size, (void*)cb_hidden->mixbufs[1]);*/
+            printf("DEBUG: Playing an invalid buffer? This is not a good sign.\n");
+            playing_buffer = 0;
+        }
+
+    /*  Make sure playingid is in sync with the hardware */
+        dev->hidden->playingid = playing_buffer;
+
+    /*  Make sure the end offset is correct for the playing buffer */
+        for (int i = 0; i < dev->spec.channels; i++) {
+        /*  Calculate end address, aka start of the next (i+1) channel's buffer */
+            endaddr = dev->hidden->mixbufs[dev->hidden->playingid] +
+                (dev->spec.samples * sizeof_sample(offs[i]) * (i + 1));
+
+        /*  Trial end error to try and limit popping */
+            endaddr -= 2;
+
+            AXSetVoiceEndOffset(
+                dev->hidden->voice[i],
+                calc_ax_offset(offs[i], endaddr)
+            );
+
+        /*  The next buffer is good to go, set the loop offset */
+            if (dev->hidden->renderingid != next_id(dev->hidden->playingid)) {
+            /*  Calculate start address for this channel's buffer */
+                void* loopaddr = dev->hidden->mixbufs[next_id(dev->hidden->playingid)] +
+                    (dev->spec.samples * sizeof_sample(offs[i]) * i);
+
+                AXSetVoiceLoopOffset(dev->hidden->voice[i], calc_ax_offset(offs[i], loopaddr));
+        /*  Otherwise, make sure the loop offset is correct for the playing buffer */
+            } else {
+                void* loopaddr = dev->hidden->mixbufs[dev->hidden->playingid] +
+                    (dev->spec.samples * sizeof_sample(offs[i]) * i);
+
+                AXSetVoiceLoopOffset(dev->hidden->voice[i], calc_ax_offset(offs[i], loopaddr));
+            }
         }
     }
+    
 
-    if (playing_buffer < 0 || playing_buffer >= NUM_BUFFERS) {
-    /*  UM */
-    /*  Uncomment for craploads of debug info */
-        /*printf("bad buffer %d\n" "|> %08X, %08X-%08X\n" \
-            "0: xxxxxxxx, %08X-%08X (%08X@%08X)\n" \
-            "1: xxxxxxxx, %08X-%08X (%08X@%08X)\n", \
-            playing_buffer, offs.currentOffset, offs.loopOffset, offs.endOffset,
-            calc_ax_offset(offs, (void*)cb_hidden->mixbufs[0]),
-                calc_ax_offset(offs, (void*)cb_hidden->mixbufs[0] + cb_this->spec.size),
-                cb_this->spec.size, (void*)cb_hidden->mixbufs[0],
-            calc_ax_offset(offs, (void*)cb_hidden->mixbufs[1]),
-                calc_ax_offset(offs, (void*)cb_hidden->mixbufs[1] + cb_this->spec.size),
-                cb_this->spec.size, (void*)cb_hidden->mixbufs[1]);*/
-        printf("DEBUG: Playing an invalid buffer? This is not a good sign.\n");
-        playing_buffer = 0;
-    }
-
-/*  Make sure playingid is in sync with the hardware */
-    cb_hidden->playingid = playing_buffer;
-
-/*  Make sure the end offset is correct for the playing buffer */
-    for (int i = 0; i < cb_this->spec.channels; i++) {
-    /*  Calculate end address, aka start of the next (i+1) channel's buffer */
-        endaddr = cb_hidden->mixbufs[cb_hidden->playingid] +
-            (cb_this->spec.samples * sizeof_sample(offs[i]) * (i + 1));
-
-    /*  Trial end error to try and limit popping */
-        endaddr -= 2;
-
-        AXSetVoiceEndOffset(
-            cb_hidden->voice[i],
-            calc_ax_offset(offs[i], endaddr)
-        );
-
-    /*  The next buffer is good to go, set the loop offset */
-        if (cb_hidden->renderingid != next_id(cb_hidden->playingid)) {
-        /*  Calculate start address for this channel's buffer */
-            void* loopaddr = cb_hidden->mixbufs[next_id(cb_hidden->playingid)] +
-                (cb_this->spec.samples * sizeof_sample(offs[i]) * i);
-
-            AXSetVoiceLoopOffset(cb_hidden->voice[i], calc_ax_offset(offs[i], loopaddr));
-    /*  Otherwise, make sure the loop offset is correct for the playing buffer */
-        } else {
-            void* loopaddr = cb_hidden->mixbufs[cb_hidden->playingid] +
-                (cb_this->spec.samples * sizeof_sample(offs[i]) * i);
-
-            AXSetVoiceLoopOffset(cb_hidden->voice[i], calc_ax_offset(offs[i], loopaddr));
-        }
-    }
 }
 
 static void WIIUAUDIO_PlayDevice(_THIS) {
@@ -427,7 +499,7 @@ static Uint8* WIIUAUDIO_GetDeviceBuf(_THIS) {
 }
 
 static void WIIUAUDIO_CloseDevice(_THIS) {
-    if (AXIsInit()) {
+    if ((AXIsInit()) && (deviceCount < 1)) {
         AXDeregisterAppFrameCallback(_WIIUAUDIO_framecallback);
         for (int i = 0; i < SIZEOF_ARR(this->hidden->voice); i++) {
             if (this->hidden->voice[i]) {
@@ -440,6 +512,8 @@ static void WIIUAUDIO_CloseDevice(_THIS) {
     if (this->hidden->mixbufs[0]) free(this->hidden->mixbufs[0]);
     if (this->hidden->deintvbuf) SDL_free(this->hidden->deintvbuf);
     SDL_free(this->hidden);
+
+    deviceCount--;
 }
 
 static void WIIUAUDIO_ThreadInit(_THIS) {
@@ -451,6 +525,7 @@ static void WIIUAUDIO_ThreadInit(_THIS) {
 }
 
 static SDL_bool WIIUAUDIO_Init(SDL_AudioDriverImpl *impl) {
+    impl->DetectDevices = WIIUAUDIO_DetectDevices;
     impl->OpenDevice = WIIUAUDIO_OpenDevice;
     impl->PlayDevice = WIIUAUDIO_PlayDevice;
     impl->WaitDevice = WIIUAUDIO_WaitDevice;
@@ -458,7 +533,9 @@ static SDL_bool WIIUAUDIO_Init(SDL_AudioDriverImpl *impl) {
     impl->CloseDevice = WIIUAUDIO_CloseDevice;
     impl->ThreadInit = WIIUAUDIO_ThreadInit;
 
-    impl->OnlyHasDefaultOutputDevice = SDL_TRUE;
+    impl->OnlyHasDefaultOutputDevice = SDL_FALSE;
+
+    deviceCount = 0;
 
     return SDL_TRUE;
 }
