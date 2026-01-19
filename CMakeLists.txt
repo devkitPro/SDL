@@ -244,6 +244,7 @@ if(WIIU)
   # Prefer coreinit atomics on Wii U due to a hardware bug in load-exclusive and store-exclusive instructions
   set(OPT_DEF_GCC_ATOMICS OFF)
   # Needed for nn::swkbd API
+  enable_language(CXX)
   set(LINKER_LANGUAGE CXX)
   set (CMAKE_CXX_STANDARD 23)
 endif()
