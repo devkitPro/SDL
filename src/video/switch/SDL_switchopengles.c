@@ -22,7 +22,7 @@
 #include "../../SDL_internal.h"
 #include "SDL_log.h"
 
-#if SDL_VIDEO_DRIVER_SWITCH
+#if defined(SDL_VIDEO_DRIVER_SWITCH) && defined(SDL_VIDEO_OPENGL_EGL)
 
 #include "SDL_video.h"
 #include "SDL_switchopengles.h"
@@ -48,6 +48,6 @@ SDL_EGL_CreateContext_impl(SWITCH)
 SDL_EGL_MakeCurrent_impl(SWITCH)
 SDL_EGL_SwapWindow_impl(SWITCH)
 
-#endif /* SDL_VIDEO_DRIVER_SWITCH */
+#endif /* SDL_VIDEO_DRIVER_SWITCH && SDL_VIDEO_OPENGL_EGL*/
 
 /* vi: set ts=4 sw=4 expandtab: */

@@ -20,7 +20,7 @@
 */
 #include "../../SDL_internal.h"
 
-#if SDL_JOYSTICK_SWITCH
+#ifdef SDL_JOYSTICK_SWITCH
 
 /* This is the dummy implementation of the SDL joystick API */
 

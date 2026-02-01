@@ -22,19 +22,18 @@
 #ifndef __SDL_SWITCHVIDEO_H__
 #define __SDL_SWITCHVIDEO_H__
 
-#if SDL_VIDEO_DRIVER_SWITCH
-
 #include <switch.h>
 
 #include "../../SDL_internal.h"
 #include "../SDL_sysvideo.h"
-
+#ifdef SDL_VIDEO_OPENGL_EGL
 #include "SDL_egl.h"
 
 typedef struct SDL_WindowData
 {
     EGLSurface egl_surface;
 } SDL_WindowData;
+#endif
 
 int SWITCH_VideoInit(_THIS);
 void SWITCH_VideoQuit(_THIS);
@@ -56,7 +55,6 @@ void SWITCH_SetWindowGrab(_THIS, SDL_Window *window, SDL_bool grabbed);
 void SWITCH_DestroyWindow(_THIS, SDL_Window *window);
 void SWITCH_PumpEvents(_THIS);
 
-#endif /* SDL_VIDEO_DRIVER_SWITCH */
 #endif /* __SDL_SWITCHVIDEO_H__ */
 
 /* vi: set ts=4 sw=4 expandtab: */

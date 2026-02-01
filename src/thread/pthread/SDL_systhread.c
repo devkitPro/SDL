@@ -128,7 +128,7 @@ void SDL_SYS_SetupThread(const char *name)
 #if !defined(__NACL__) && !defined(__SWITCH__)
     int i;
     sigset_t mask;
-#endif /* !__NACL__ && !__NINTENDO_SWITCH__ */
+#endif /* !__NACL__ && !__SWITCH__ */
 
     if (name != NULL) {
         #if (defined(__MACOSX__) || defined(__IPHONEOS__) || defined(__LINUX__)) && defined(HAVE_DLOPEN)
@@ -172,7 +172,7 @@ void SDL_SYS_SetupThread(const char *name)
         sigaddset(&mask, sig_list[i]);
     }
     pthread_sigmask(SIG_BLOCK, &mask, 0);
-#endif /* !__NACL__ && !__NINTENDO_SWITCH__ */
+#endif /* !__NACL__ && !__SWITCH__ */
 
 
 #ifdef PTHREAD_CANCEL_ASYNCHRONOUS
@@ -194,7 +194,7 @@ int SDL_SYS_SetThreadPriority(SDL_ThreadPriority priority)
 #if __NACL__ || __RISCOS__ || __OS2__
     /* FIXME: Setting thread priority does not seem to be supported in NACL */
     return 0;
-#elif __SWITCH__
+#elif defined(__SWITCH__)
     Result res;
     if (priority == SDL_THREAD_PRIORITY_HIGH) {
         res = svcSetThreadPriority(CUR_THREAD_HANDLE, 0x2B);

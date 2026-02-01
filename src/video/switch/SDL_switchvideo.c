@@ -21,7 +21,7 @@
 
 #include "../../SDL_internal.h"
 
-#if SDL_VIDEO_DRIVER_SWITCH
+#ifdef SDL_VIDEO_DRIVER_SWITCH
 
 #include "../SDL_sysvideo.h"
 #include "../../render/SDL_sysrender.h"
@@ -89,7 +89,7 @@ SWITCH_CreateDevice()
     //device->SetWindowMouseGrab = SWITCH_SetWindowGrab; // SDL 2.0.16
     //device->SetWindowKeyboardGrab = SWITCH_SetWindowGrab; // SDL 2.0.16
     device->DestroyWindow = SWITCH_DestroyWindow;
-
+#ifdef SDL_VIDEO_OPENGL_EGL
     device->GL_LoadLibrary = SWITCH_GLES_LoadLibrary;
     device->GL_GetProcAddress = SWITCH_GLES_GetProcAddress;
     device->GL_UnloadLibrary = SWITCH_GLES_UnloadLibrary;
@@ -100,7 +100,7 @@ SWITCH_CreateDevice()
     device->GL_SwapWindow = SWITCH_GLES_SwapWindow;
     device->GL_DeleteContext = SWITCH_GLES_DeleteContext;
     device->GL_DefaultProfileConfig = SWITCH_GLES_DefaultProfileConfig;
-
+#endif
     device->StartTextInput = SWITCH_StartTextInput;
     device->StopTextInput = SWITCH_StopTextInput;
     device->HasScreenKeyboardSupport = SWITCH_HasScreenKeyboardSupport;
@@ -156,13 +156,14 @@ SWITCH_VideoInit(_THIS)
 void
 SWITCH_VideoQuit(_THIS)
 {
+#ifdef SDL_VIDEO_OPENGL_EGL
     // this should not be needed if user code is right (SDL_GL_LoadLibrary/SDL_GL_UnloadLibrary calls match)
     // this (user) error doesn't have the same effect on switch thought, as the driver needs to be unloaded (crash)
     if(_this->gl_config.driver_loaded > 0) {
         SWITCH_GLES_UnloadLibrary(_this);
         _this->gl_config.driver_loaded = 0;
     }
-
+#endif
     // exit touch
     SWITCH_QuitTouch();
     // exit keyboard
@@ -195,6 +196,7 @@ SWITCH_GetDisplayModes(_THIS, SDL_VideoDisplay *display)
 int
 SWITCH_SetDisplayMode(_THIS, SDL_VideoDisplay *display, SDL_DisplayMode *mode)
 {
+#ifdef SDL_VIDEO_OPENGL_EGL
     SDL_WindowData *data = (SDL_WindowData *) SDL_GetFocusWindow()->driverdata;
     SDL_GLContext ctx = SDL_GL_GetCurrentContext();
     NWindow *nWindow = nwindowGetDefault();
@@ -206,7 +208,7 @@ SWITCH_SetDisplayMode(_THIS, SDL_VideoDisplay *display, SDL_DisplayMode *mode)
         data->egl_surface = SDL_EGL_CreateSurface(_this, nWindow);
         SDL_EGL_MakeCurrent(_this, data->egl_surface, ctx);
     }
-
+#endif
     return 0;
 }
 
@@ -214,13 +216,15 @@ int
 SWITCH_CreateWindow(_THIS, SDL_Window *window)
 {
     Result rc;
+#ifdef SDL_VIDEO_OPENGL_EGL
     SDL_WindowData *window_data = NULL;
+#endif
     NWindow *nWindow = NULL;
 
     if (switch_window != NULL) {
         return SDL_SetError("Switch only supports one window");
     }
-
+#ifdef SDL_VIDEO_OPENGL_EGL
     if (!_this->egl_data) {
         return SDL_SetError("EGL not initialized");
     }
@@ -229,14 +233,14 @@ SWITCH_CreateWindow(_THIS, SDL_Window *window)
     if (window_data == NULL) {
         return SDL_OutOfMemory();
     }
-
+#endif
     nWindow = nwindowGetDefault();
 
     rc = nwindowSetDimensions(nWindow, window->w, window->h);
     if (R_FAILED(rc)) {
         return SDL_SetError("Could not set NWindow dimensions: 0x%x", rc);
     }
-
+#ifdef SDL_VIDEO_OPENGL_EGL
     window_data->egl_surface = SDL_EGL_CreateSurface(_this, nWindow);
     if (window_data->egl_surface == EGL_NO_SURFACE) {
         return SDL_SetError("Could not create GLES window surface");
@@ -244,6 +248,7 @@ SWITCH_CreateWindow(_THIS, SDL_Window *window)
 
     /* Setup driver data for this window */
     window->driverdata = window_data;
+#endif
     switch_window = window;
 
     /* starting operation mode */
@@ -260,9 +265,9 @@ SWITCH_CreateWindow(_THIS, SDL_Window *window)
 void
 SWITCH_DestroyWindow(_THIS, SDL_Window *window)
 {
-    SDL_WindowData *data = (SDL_WindowData *) window->driverdata;
-
     if (window == switch_window) {
+#ifdef SDL_VIDEO_OPENGL_EGL
+        SDL_WindowData *data = (SDL_WindowData *) window->driverdata;
         if (data != NULL) {
             if (data->egl_surface != EGL_NO_SURFACE) {
                 SDL_EGL_MakeCurrent(_this, NULL, NULL);
@@ -273,6 +278,7 @@ SWITCH_DestroyWindow(_THIS, SDL_Window *window)
                 window->driverdata = NULL;
             }
         }
+#endif
         switch_window = NULL;
     }
 }
@@ -297,6 +303,7 @@ SWITCH_SetWindowPosition(_THIS, SDL_Window *window)
 void
 SWITCH_SetWindowSize(_THIS, SDL_Window *window)
 {
+#ifdef SDL_VIDEO_OPENGL_EGL
     u32 w = 0, h = 0;
     SDL_WindowData *data = (SDL_WindowData *) window->driverdata;
     SDL_GLContext ctx = SDL_GL_GetCurrentContext();
@@ -311,6 +318,7 @@ SWITCH_SetWindowSize(_THIS, SDL_Window *window)
             SDL_EGL_MakeCurrent(_this, data->egl_surface, ctx);
         }
     }
+#endif
 }
 void
 SWITCH_ShowWindow(_THIS, SDL_Window *window)

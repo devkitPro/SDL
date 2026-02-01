@@ -22,7 +22,7 @@
 #include "../../SDL_internal.h"
 
 #ifndef SDL_POWER_DISABLED
-#if SDL_POWER_SWITCH
+#ifdef SDL_POWER_SWITCH
 
 #include <switch.h>
 #include "SDL_power.h"

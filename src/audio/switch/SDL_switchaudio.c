@@ -20,7 +20,7 @@
 */
 #include "../../SDL_internal.h"
 
-#if SDL_AUDIO_DRIVER_SWITCH
+#ifdef SDL_AUDIO_DRIVER_SWITCH
 
 #include <stdio.h>
 #include <string.h>

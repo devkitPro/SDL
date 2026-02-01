@@ -46,7 +46,7 @@
 #include "os2/SDL_systhread_c.h"
 #elif SDL_THREAD_NGAGE
 #include "ngage/SDL_systhread_c.h"
-#elif SDL_THREAD_SWITCH
+#elif defined(SDL_THREAD_SWITCH)
 #include "switch/SDL_systhread_c.h"
 #else
 #error Need thread implementation for this platform

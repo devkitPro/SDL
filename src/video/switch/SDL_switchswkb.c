@@ -4,7 +4,7 @@
 
 #include "../../SDL_internal.h"
 
-#if SDL_VIDEO_DRIVER_SWITCH
+#ifdef SDL_VIDEO_DRIVER_SWITCH
 
 #include <switch.h>
 #include "SDL_switchswkb.h"
@@ -108,4 +108,4 @@ SWITCH_StopTextInput(_THIS)
     kbdShown = false;
 }
 
-#endif
+#endif // SDL_VIDEO_DRIVER_SWITCH

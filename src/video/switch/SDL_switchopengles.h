@@ -23,7 +23,7 @@
 #ifndef SDL_switchteopengles_h_
 #define SDL_switchteopengles_h_
 
-#if SDL_VIDEO_DRIVER_SWITCH
+#ifdef SDL_VIDEO_OPENGL_EGL
 
 #include "../SDL_sysvideo.h"
 #include "../SDL_egl_c.h"
@@ -43,7 +43,7 @@ extern int SWITCH_GLES_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext cont
 extern void SWITCH_GLES_DefaultProfileConfig(_THIS, int *mask, int *major, int *minor);
 extern void SWITCH_GLES_GetDrawableSize(_THIS, SDL_Window *window, int *w, int *h);
 
-#endif /* SDL_VIDEO_DRIVER_SWITCH */
+#endif /* SDL_VIDEO_OPENGL_EGL */
 #endif /* SDL_switchteopengles_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */
