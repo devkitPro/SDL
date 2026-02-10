@@ -48,20 +48,18 @@
 
 #define AX_MAIN_AFFINITY OS_THREAD_ATTRIB_AFFINITY_CPU1
 
-#define WIIU_DEVICE_TV 0
-#define WIIU_DEVICE_GAMEPAD 1
-#define WIIU_DEVICE_MIRRORED 2
+#define WIIU_DEVICE_TV 1
+#define WIIU_DEVICE_GAMEPAD 2
+#define WIIU_DEVICE_MIRRORED 3
 #define WIIU_MAX_DEVICES 3
-
-static int mirroredHandle;
-static int tvHandle;
-static int drcHandle;
 
 static void _WIIUAUDIO_framecallback();
 static SDL_AudioDevice *wiiuDevices[WIIU_MAX_DEVICES];
 static int deviceType;
 static int deviceCount;
 
+// Protects wiiuDevices/deviceCount during device open/close while the frame callback is running
+static SDL_SpinLock deviceListLock = 0;
 /*  Some helpers for AX-related math */
 /*  Absolute address to an AXVoiceOffsets offset */
 #define calc_ax_offset(offs, addr) (((void*)addr - offs.data) \
@@ -255,8 +253,10 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
         AXVoiceEnd(this->hidden->voice[i]);
     }
 
+    SDL_AtomicLock(&deviceListLock);
     wiiuDevices[deviceCount] = this;
     deviceCount++;
+    SDL_AtomicUnlock(&deviceListLock);
 
     return 0;
 }
@@ -279,9 +279,9 @@ static void WIIUAUDIO_DetectDevices(void) {
 
     SDL_CalculateAudioSpec(&spec);
 
-    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_MIRRORED, &spec, &mirroredHandle);
-    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_TV, &spec, &tvHandle);
-    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_GAMEPAD, &spec, &drcHandle);
+    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_MIRRORED, &spec, (void*) WIIU_DEVICE_MIRRORED);  
+    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_TV, &spec, (void*) WIIU_DEVICE_TV);  
+    SDL_AddAudioDevice(SDL_FALSE, SDL_AUDIO_DEVICE_WIIU_GAMEPAD, &spec, (void*) WIIU_DEVICE_GAMEPAD); 
 }
 
 static int WIIUAUDIO_OpenDevice(_THIS, const char *devname) {
@@ -293,10 +293,10 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char *devname) {
 
     deviceType = WIIU_DEVICE_MIRRORED;
 
-    if (this->handle == &tvHandle) {
+    if (this->handle == (void*)WIIU_DEVICE_TV) {
         deviceType = WIIU_DEVICE_TV;
     }
-    else if (this->handle == &drcHandle) {
+    else if (this->handle == (void*)WIIU_DEVICE_GAMEPAD) {
         deviceType = WIIU_DEVICE_GAMEPAD;
     }
 
@@ -348,8 +348,18 @@ static int WIIUAUDIO_OpenDevice(_THIS, const char *devname) {
 
 /*  Called every 3ms before a frame of audio is rendered. Keep it fast! */
 static void _WIIUAUDIO_framecallback() {
-    for (int deviceIndex = 0; deviceIndex < deviceCount; ++deviceIndex) {
-        SDL_AudioDevice *dev = wiiuDevices[deviceIndex];
+    SDL_AudioDevice *local[WIIU_MAX_DEVICES];
+    int count;
+    
+    SDL_AtomicLock(&deviceListLock);
+    count = deviceCount;
+    for (int i = 0; i < count; i++) {
+        local[i] = wiiuDevices[i];
+    }
+    SDL_AtomicUnlock(&deviceListLock);
+    
+    for (int deviceIndex = 0; deviceIndex < count; ++deviceIndex) {
+        SDL_AudioDevice *dev = local[deviceIndex];
         
         int playing_buffer = -1;
         AXVoiceOffsets offs[6];
@@ -492,7 +502,18 @@ static void WIIUAUDIO_CloseDevice(_THIS) {
     if (this->hidden->deintvbuf) SDL_free(this->hidden->deintvbuf);
     SDL_free(this->hidden);
 
-    deviceCount--;
+    SDL_AtomicLock(&deviceListLock);
+    for (int i = 0; i < deviceCount; ++i) {
+        if (wiiuDevices[i] == this) {
+            for (int j = i; j < deviceCount - 1; ++j) {
+                wiiuDevices[j] = wiiuDevices[j + 1];
+            }
+            wiiuDevices[deviceCount - 1] = NULL;
+            deviceCount--;
+            break;
+        }
+    }
+    SDL_AtomicUnlock(&deviceListLock);
 }
 
 static void WIIUAUDIO_ThreadInit(_THIS) {
