@@ -266,7 +266,7 @@ static int SWITCH_JoystickSetSensorsEnabled(SDL_Joystick *joystick, SDL_bool ena
  */
 static void SWITCH_JoystickUpdate(SDL_Joystick *joystick) {
     u64 diff;
-    int index = (int) SDL_JoystickInstanceID(joystick);
+    int index = joystick->instance_id;
     if (index >= JOYSTICK_COUNT || SDL_IsTextInputActive()) {
         return;
     }
