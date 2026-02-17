@@ -34,7 +34,8 @@
 #define SIZEOF_ARR(arr) (sizeof(arr) / sizeof(arr[0]))
 
 struct SDL_PrivateAudioData {
-    /* 6 possible voices for 6 channels */
+   SDL_atomic_t isclosing;
+   /* 6 possible voices for 6 channels */
     AXVoice* voice[6];
     /* The raw allocated mixing buffer. */
     Uint8   *rawbuf;

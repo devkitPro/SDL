@@ -87,6 +87,8 @@ static int _WIIUAUDIO_OpenDeviceFunction(_THIS) {
 
     SDL_zerop(this->hidden);
 
+    SDL_AtomicSet(&this->hidden->isclosing, 0);
+
     if (this->spec.channels < 1) this->spec.channels = 1;
     if (this->spec.channels > WIIU_MAX_VALID_CHANNELS)
         this->spec.channels = WIIU_MAX_VALID_CHANNELS;
@@ -365,6 +367,10 @@ static void _WIIUAUDIO_framecallback() {
         AXVoiceOffsets offs[6];
         void* endaddr;
 
+        if (SDL_AtomicGet(&dev->hidden->isclosing)) {
+            continue;
+        }
+
         for (int i = 0; i < dev->spec.channels; i++) {
             AXGetVoiceOffsets(dev->hidden->voice[i], &offs[i]);
         }
@@ -491,17 +497,8 @@ static Uint8* WIIUAUDIO_GetDeviceBuf(_THIS) {
 }
 
 static void WIIUAUDIO_CloseDevice(_THIS) {
-    for (int i = 0; i < SIZEOF_ARR(this->hidden->voice); i++) {
-        if (this->hidden->voice[i]) {
-            AXFreeVoice(this->hidden->voice[i]);
-            this->hidden->voice[i] = NULL;
-        }
-    }
+    SDL_AtomicSet(&this->hidden->isclosing, 1);
     
-    if (this->hidden->mixbufs[0]) free(this->hidden->mixbufs[0]);
-    if (this->hidden->deintvbuf) SDL_free(this->hidden->deintvbuf);
-    SDL_free(this->hidden);
-
     SDL_AtomicLock(&deviceListLock);
     for (int i = 0; i < deviceCount; ++i) {
         if (wiiuDevices[i] == this) {
@@ -513,7 +510,18 @@ static void WIIUAUDIO_CloseDevice(_THIS) {
             break;
         }
     }
-    SDL_AtomicUnlock(&deviceListLock);
+    SDL_AtomicUnlock(&deviceListLock);    
+    
+    for (int i = 0; i < SIZEOF_ARR(this->hidden->voice); i++) {
+        if (this->hidden->voice[i]) {
+            AXFreeVoice(this->hidden->voice[i]);
+            this->hidden->voice[i] = NULL;
+        }
+    }
+    
+    if (this->hidden->mixbufs[0]) free(this->hidden->mixbufs[0]);
+    if (this->hidden->deintvbuf) SDL_free(this->hidden->deintvbuf);
+    SDL_free(this->hidden);
 }
 
 static void WIIUAUDIO_ThreadInit(_THIS) {
