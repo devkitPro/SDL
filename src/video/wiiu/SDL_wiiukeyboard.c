@@ -81,7 +81,7 @@ static void WIIU_SendKeyEventText(KBDKeyEvent *e)
 		utf8[1] = 0x80 | ((symbol >> 6) & 0x3F);
 		utf8[2] = 0x80 |  (symbol & 0x3F);
 	}
-	
+
 	SDL_SendKeyboardText((char *)utf8);
 }
 
@@ -92,7 +92,7 @@ void SDL_WIIU_PumpKeyboardEvents(_THIS)
 	SDL_LockMutex(event_buffer_mutex);
 
 	/* only generate keyboard and text events if swkbd is not visible */
-	if (!WIIU_SWKBD_IsScreenKeyboardShown(NULL, NULL)) {
+	if (!WIIU_SWKBD_IsScreenKeyboardShown(_this, NULL)) {
 		/* process each key event */
 		for (i = 0; i < event_buffer.current; i++) {
 			SDL_SendKeyboardKey(
@@ -104,7 +104,7 @@ void SDL_WIIU_PumpKeyboardEvents(_THIS)
 				WIIU_SendKeyEventText(&event_buffer.events[i]);
 		}
 	}
-	
+
 	/* reset the buffer */
 	event_buffer.current = 0;
 

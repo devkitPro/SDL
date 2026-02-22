@@ -712,7 +712,8 @@ SDL_bool WIIU_SWKBD_IsScreenKeyboardShown(_THIS, SDL_Window *window)
     if (!detail::create::created)
         return SDL_FALSE;
 
-    if (window != detail::appear::window)
+    // Only match for the correct window when window is not null.
+    if (window && window != detail::appear::window)
         return SDL_FALSE;
 
     nn::swkbd::State state = nn::swkbd::GetStateInputForm();
