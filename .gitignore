@@ -63,6 +63,9 @@ cmake-build-*
 xcuserdata
 *.xcworkspace
 
+# for VSCode
+/.vscode
+
 # for QtCreator
 CMakeLists.txt.user
 build*/

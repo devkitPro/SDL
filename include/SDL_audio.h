@@ -148,6 +148,11 @@ typedef Uint16 SDL_AudioFormat;
 
 /* @} *//* Audio flags */
 
+/* Wii U Audio Devices */
+#define SDL_AUDIO_DEVICE_WIIU_MIRRORED      "Wii U Mirrored"
+#define SDL_AUDIO_DEVICE_WIIU_TV            "Wii U TV"
+#define SDL_AUDIO_DEVICE_WIIU_GAMEPAD       "Wii U Gamepad"
+
 /**
  * This function is called when the audio device needs more data.
  *
