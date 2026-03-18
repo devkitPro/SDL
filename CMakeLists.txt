@@ -3454,6 +3454,9 @@ elseif(NINTENDO_SWITCH)
     set(HAVE_CLOCK_GETTIME 1)
   endif()
 
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/locale/switch/*.c")
+  set(HAVE_SDL_LOCALE TRUE)
+
   set(SDL_TIMER_SWITCH 1)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/switch/*.c")
   set(HAVE_SDL_TIMERS TRUE)
