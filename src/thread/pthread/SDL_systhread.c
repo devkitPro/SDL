@@ -162,7 +162,7 @@ void SDL_SYS_SetupThread(const char *name)
     }
 
    /* NativeClient does not yet support signals.*/
-#if !defined(__NACL__)
+#if !defined(__NACL__) && !defined(__wii__) && !defined(__gamecube__)
     /* Mask asynchronous signals for this thread */
     sigemptyset(&mask);
     for (i = 0; sig_list[i]; ++i) {
@@ -188,7 +188,7 @@ SDL_threadID SDL_ThreadID(void)
 
 int SDL_SYS_SetThreadPriority(SDL_ThreadPriority priority)
 {
-#if __NACL__ || __RISCOS__ || __OS2__
+#if __NACL__ || __RISCOS__ || __OS2__ || __wii__ || __gamecube__
     /* FIXME: Setting thread priority does not seem to be supported in NACL */
     return 0;
 #else

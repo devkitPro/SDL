@@ -46,7 +46,7 @@ static void ShutdownCB()
     OGC_PowerOffRequested = true;
 }
 
-static void ResetCB(unsigned int, void*)
+static void ResetCB(u32, void *)
 {
     OGC_ResetRequested = true;
 }
