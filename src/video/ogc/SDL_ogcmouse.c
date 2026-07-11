@@ -312,7 +312,7 @@ void OGC_draw_cursor(_THIS)
                      SDL_ScaleModeNearest);
 
     guMtxIdentity(mv);
-    guMtxScaleApply(mv, mv, screen_w / 640.0f, screen_h / 480.0f, 1.0f);
+    guMtxScaleApply(mv, mv, screen_w / (480.0f*OGC_get_aspect_ratio()), screen_h / 480.0f, 1.0f);
     if (angle != 0.0f) {
         Mtx rot;
         guMtxRotDeg(rot, 'z', angle);
