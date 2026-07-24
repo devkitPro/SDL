@@ -18,25 +18,31 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
+#ifndef SDL_ogcosk_c_h_
+#define SDL_ogcosk_c_h_
+
 #include "../../SDL_internal.h"
+#include "../SDL_sysvideo.h"
 
-#ifndef SDL_ogcgxcommon_h_
-#define SDL_ogcgxcommon_h_
+#include "SDL_ogcsupport.h"
 
-#include "SDL_render.h"
-#include "SDL_ogcvideo.h"
+extern const SDL_OGC_VkPlugin *OGC_VkPlugin;
 
-#include <gctypes.h>
+void OGC_StartTextInput(_THIS);
+void OGC_StopTextInput(_THIS);
+void OGC_SetTextInputRect(_THIS, const SDL_Rect *rect);
+void OGC_ClearComposition(_THIS);
+SDL_bool OGC_IsTextInputShown(_THIS);
 
-#define GX_COLOR_AS_U32(c) *((u32*)&c)
+SDL_bool OGC_HasScreenKeyboardSupport(_THIS);
+void OGC_ShowScreenKeyboard(_THIS, SDL_Window *window);
+void OGC_HideScreenKeyboard(_THIS, SDL_Window *window);
+SDL_bool OGC_IsScreenKeyboardShown(_THIS, SDL_Window *window);
 
-void OGC_draw_init(int w, int h);
-void OGC_set_screen_pan_y(int y);
-int OGC_get_screen_pan_y();
-void OGC_set_viewport(int x, int y, int w, int h, bool honour_panning);
-void OGC_load_texture(void *texels, int w, int h, u8 gx_format,
-                      SDL_ScaleMode scale_mode);
+SDL_bool OGC_keyboard_render(_THIS);
+int OGC_keyboard_get_pan_y(_THIS);
 
-#endif /* SDL_ogcgxcommon_h_ */
+#endif /* SDL_ogcosk_c_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */
