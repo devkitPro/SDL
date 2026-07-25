@@ -19,6 +19,8 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "SDL_internal.h"
+
 #if SDL_VIDEO_DRIVER_SWITCH
 
 #include <switch.h>
