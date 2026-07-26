@@ -49,10 +49,11 @@ void SWITCH_PollKeyboard(Uint64 timestamp)
             bool pressed = hidKeyboardStateGetKey(&state, (int)scancode);
             if (pressed && !keys[scancode]) {
                 keys[scancode] = true;
+                SDL_SendKeyboardKey(timestamp, keyboard_id, pressed, scancode, keys[scancode]);
             } else if (!pressed && keys[scancode]) {
                 keys[scancode] = false;
+                SDL_SendKeyboardKey(timestamp, keyboard_id, pressed, scancode, keys[scancode]);
             }
-            SDL_SendKeyboardKey(timestamp, keyboard_id, pressed, scancode, keys[scancode]);
         }
     }
 }
