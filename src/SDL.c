@@ -798,6 +798,8 @@ const char *SDL_GetPlatform(void)
     return "GNU/Hurd";
 #elif defined(__managarm__)
     return "Managarm";
+#elif defined(SDL_PLATFORM_SWITCH)
+    return "Nintendo Switch";
 #else
     return "Unknown (see SDL_platform.h)";
 #endif
