@@ -71,7 +71,7 @@ static SDL_GetPowerInfo_Impl implementations[] = {
 #ifdef SDL_POWER_N3DS // handles N3DS.
     SDL_GetPowerInfo_N3DS,
 #endif
-#ifdef SDL_POWER_SWITCH // handles N3DS.
+#ifdef SDL_POWER_SWITCH // handles Switch.
     SDL_GetPowerInfo_SWITCH,
 #endif
 #ifdef SDL_POWER_EMSCRIPTEN // handles Emscripten
