@@ -26,6 +26,7 @@
 #include "SDL_hints.h"
 
 #include "SDL_ogccursors.h"
+#include "SDL_ogcevents_c.h"
 #include "SDL_ogcgxcommon.h"
 #include "SDL_ogcmouse.h"
 #include "SDL_ogcpixels.h"
@@ -39,7 +40,6 @@
 #include <ogc/gx.h>
 #include <ogc/lwp_watchdog.h>
 #include <opengx.h>
-#include <wiiuse/wpad.h>
 
 typedef struct _OGC_CursorData
 {
@@ -243,9 +243,18 @@ void OGC_draw_cursor(_THIS)
     /* If this is the default cursor, rotate it, and if it's not pointed at the
      * screen, hide it */
     if (mouse->cur_cursor == mouse->def_cursor) {
-        WPADData *data = WPAD_Data(mouse->mouseID);
-        angle = data->ir.angle;
-        if (!data->ir.valid) return;
+        egc_input_device_t *device;
+        egc_point_t point;
+        const egc_accelerometer_t *accel;
+
+        _OGC_Controller *controller = OGC_get_controller(mouse->mouseID);
+        if (!controller) return;
+
+        device = controller->egc_device;
+        point = egc_input_device_read_touch_point(device, 0);
+        if (point.x < 0) return;
+        accel = egc_input_device_read_accelerometer(device, 0);
+        angle = atan2f(accel->x, accel->y);
     }
 
     screen_w = _this->displays[0].current_mode.w;
@@ -315,7 +324,7 @@ void OGC_draw_cursor(_THIS)
     guMtxScaleApply(mv, mv, screen_w / 640.0f, screen_h / 480.0f, 1.0f);
     if (angle != 0.0f) {
         Mtx rot;
-        guMtxRotDeg(rot, 'z', angle);
+        guMtxRotRad(rot, 'z', angle);
         guMtxConcat(mv, rot, mv);
     }
     guMtxTransApply(mv, mv, mouse->x, mouse->y, 0);

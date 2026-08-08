@@ -314,7 +314,15 @@ int OGC_VideoInit(_THIS)
 
     videodata->vmode = vmode;
 
+    egc_initialize(OGC_device_added_cb, OGC_device_removed_cb, NULL);
+
 #ifdef __wii__
+    /* Page mode does not slow BT down, so we keep it on all the time; but
+     * scanning has a noticeable effect on BT performance, so we leave it on
+     * only until we get the first controller connected. */
+    egc_bt_enter_page_mode();
+    egc_bt_start_scan();
+
     OGC_InitMouse(_this);
     /* OGC_PumpEvents reads the keyboard, so we need to initialize it here */
     KEYBOARD_Init(NULL);

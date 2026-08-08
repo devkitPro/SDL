@@ -32,11 +32,22 @@
 #include "SDL_ogcvideo.h"
 
 #include <ogc/system.h>
-#include <wiiuse/wpad.h>
 
 /* These variables can be set from the handlers registered in SDL_main() */
 bool OGC_PowerOffRequested = false;
 bool OGC_ResetRequested = false;
+
+int OGC_NumControllers = 0;
+
+/* This is the array of structs holding the controller data */
+static _OGC_Controller s_controllers[OGC_MAX_CONTROLLERS];
+/* This is an array of indexes to the previous array: this is done to
+ * avoid moving the data when a controller is removed, and to preserve the
+ * IDs. */
+static u8 s_controller_indices[OGC_MAX_CONTROLLERS];
+static SDL_JoystickID s_next_instance_id = 1;
+static _OGC_ControllerCb s_joystick_added_cb = NULL;
+static _OGC_ControllerCb s_joystick_removed_cb = NULL;
 
 #ifdef __wii__
 #define MAX_WII_MOUSE_BUTTONS 2
@@ -44,8 +55,8 @@ static const struct {
     int wii;
     int mouse;
 } s_mouse_button_map[MAX_WII_MOUSE_BUTTONS] = {
-    { WPAD_BUTTON_B, SDL_BUTTON_LEFT },
-    { WPAD_BUTTON_A, SDL_BUTTON_RIGHT },
+    { EGC_GAMEPAD_BUTTON_SOUTH, SDL_BUTTON_LEFT },
+    { EGC_GAMEPAD_BUTTON_EAST, SDL_BUTTON_RIGHT },
 };
 
 static void pump_ir_events(_THIS)
@@ -54,31 +65,29 @@ static void pump_ir_events(_THIS)
 
     if (!_this->windows) return;
 
-    if (!SDL_WasInit(SDL_INIT_JOYSTICK)) {
-        /* Get events from WPAD; we don't need to do this if the joystick
-         * system was initialized, because in that case this operation is done
-         * there at every event loop iteration. */
-        WPAD_ReadPending(WPAD_CHAN_ALL, NULL);
-    }
-
     screen_w = _this->displays[0].current_mode.w;
     screen_h = _this->displays[0].current_mode.h;
 
-    for (int i = 0; i < 4; i++) {
-        WPADData *data = WPAD_Data(i);
+    for (int i = 0; i < OGC_NumControllers; i++) {
+        _OGC_Controller *controller = OGC_get_controller(i);
+        egc_input_device_t *device = controller->egc_device;
+        egc_point_t point;
 
-        if (!data->ir.valid) continue;
+        if (device->desc->num_touch_points == 0) continue;
+
+        point = egc_input_device_read_touch_point(device, 0);
+        if (point.x < 0) continue;
 
         SDL_SendMouseMotion(_this->windows, i, 0,
-                            data->ir.x * screen_w / 640,
-                            data->ir.y * screen_h / 480);
+                            point.x * screen_w / EGC_GAMEPAD_TOUCH_RES,
+                            point.y * screen_h / EGC_GAMEPAD_TOUCH_RES);
 
         for (int b = 0; b < MAX_WII_MOUSE_BUTTONS; b++) {
-            if (data->btns_d & s_mouse_button_map[b].wii) {
+            if (controller->btns_pressed & s_mouse_button_map[b].wii) {
                 SDL_SendMouseButton(_this->windows, i,
                                     SDL_PRESSED, s_mouse_button_map[b].mouse);
             }
-            if (data->btns_u & s_mouse_button_map[b].wii) {
+            if (controller->btns_released & s_mouse_button_map[b].wii) {
                 SDL_SendMouseButton(_this->windows, i,
                                     SDL_RELEASED, s_mouse_button_map[b].mouse);
             }
@@ -91,6 +100,12 @@ static void pump_ir_events(_THIS)
 }
 #endif
 
+_OGC_Controller *OGC_get_controller(int i)
+{
+    if (i < 0 || i >= OGC_NumControllers) return NULL;
+    return &s_controllers[s_controller_indices[i]];
+}
+
 void OGC_PumpEvents(_THIS)
 {
     if (OGC_ResetRequested || OGC_PowerOffRequested) {
@@ -102,10 +117,87 @@ void OGC_PumpEvents(_THIS)
         }
     }
 
+    egc_handle_events();
+    for (int i = 0; i < OGC_NumControllers; i++) {
+        _OGC_Controller *controller = OGC_get_controller(i);
+        u32 buttons = egc_input_device_read_buttons(controller->egc_device);
+        controller->btns_held = controller->btns_prev & buttons;
+        controller->btns_released = controller->btns_prev & ~buttons;
+        controller->btns_pressed = buttons & controller->btns_prev;
+        controller->btns_prev = buttons;
+    }
+
 #ifdef __wii__
     pump_ir_events(_this);
     OGC_PumpKeyboardEvents(_this);
 #endif
+}
+
+void OGC_device_added_cb(egc_input_device_t *device, void *userdata)
+{
+    _OGC_Controller *controller;
+
+    int free_index = -1;
+    for (int i = 0; i < OGC_MAX_CONTROLLERS; i++) {
+        controller = &s_controllers[i];
+        if (controller->egc_device == NULL) {
+            free_index = i;
+            break;
+        }
+    }
+    if (free_index < 0) return;
+
+    memset(controller, 0, sizeof(*controller));
+    controller->egc_device = device;
+    controller->instance_id = s_next_instance_id++;
+    s_controller_indices[OGC_NumControllers++] = free_index;
+
+#ifdef __wii__
+    egc_bt_stop_scan();
+#endif
+
+    if (s_joystick_added_cb) {
+        s_joystick_added_cb(controller);
+    }
+}
+
+void OGC_device_removed_cb(egc_input_device_t *device, void *userdata)
+{
+    _OGC_Controller *controller = NULL;
+    int found_index = -1;
+    for (int i = 0; i < OGC_NumControllers; i++) {
+        controller = OGC_get_controller(i);
+        if (controller->egc_device == device) {
+            found_index = i;
+            controller->egc_device = NULL;
+            break;
+        }
+    }
+    if (found_index < 0) return;
+
+    if (s_joystick_removed_cb) {
+        s_joystick_removed_cb(controller);
+    }
+
+    OGC_NumControllers--;
+    /* Move back all later indices by one position */
+    for (int i = found_index; i < OGC_NumControllers; i++) {
+        s_controller_indices[i] = s_controller_indices[i + 1];
+    }
+
+#ifdef __wii__
+    if (OGC_NumControllers == 0) {
+        egc_bt_start_scan();
+    }
+#endif
+
+}
+
+void OGC_register_joystick_callbacks(_OGC_ControllerCb added_cb,
+                                     _OGC_ControllerCb removed_cb)
+{
+    s_joystick_added_cb = added_cb;
+    s_joystick_removed_cb = removed_cb;
 }
 
 #endif /* SDL_VIDEO_DRIVER_OGC */

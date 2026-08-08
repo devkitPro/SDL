@@ -25,11 +25,43 @@
 #include "../../SDL_internal.h"
 
 #include "SDL_ogcvideo.h"
+#include "SDL_joystick.h"
+
+#include <embedded-game-controller/egc.h>
+
+#ifdef __wii__
+/* 4 GameCube controllers + 4 Wiimotes + possibly 4 separate expansions. In
+ * theory there could be even more controller, connected via USB and bluetooth,
+ * but let's be realistic :-)
+ */
+#define OGC_MAX_CONTROLLERS 12
+#else
+#define OGC_MAX_CONTROLLERS 4
+#endif
+
+typedef struct {
+    egc_input_device_t *egc_device;
+    SDL_JoystickID instance_id;
+    u32 btns_prev;
+    u32 btns_pressed;
+    u32 btns_held;
+    u32 btns_released;
+} _OGC_Controller;
+
+extern int OGC_NumControllers;
 
 extern bool OGC_ResetRequested;
 extern bool OGC_PowerOffRequested;
 
 extern void OGC_PumpEvents(_THIS);
+
+void OGC_device_added_cb(egc_input_device_t *device, void *userdata);
+void OGC_device_removed_cb(egc_input_device_t *device, void *userdata);
+_OGC_Controller *OGC_get_controller(int i);
+
+typedef void (*_OGC_ControllerCb)(_OGC_Controller *controller);
+void OGC_register_joystick_callbacks(_OGC_ControllerCb added_cb,
+                                     _OGC_ControllerCb removed_cb);
 
 #endif /* SDL_ogcevents_c_h_ */
 

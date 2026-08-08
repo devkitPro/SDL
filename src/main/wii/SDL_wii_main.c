@@ -38,7 +38,6 @@
 #include <fat.h>
 #include <ogc/usbmouse.h>
 #include <ogcsys.h>
-#include <wiiuse/wpad.h>
 
 static void ShutdownCB()
 {
@@ -63,13 +62,9 @@ int main(int argc, char *argv[])
         IOS_ReloadIOS(preferred);
 
     // Wii Power/Reset buttons
-    WPAD_Init();
-    WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownCB);
     SYS_SetPowerCallback(ShutdownCB);
     SYS_SetResetCallback(ResetCB);
     // TODO OGC_InitVideoSystem();
-    WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
-    WPAD_SetVRes(WPAD_CHAN_ALL, 640, 480);
 
     MOUSE_Init();
     fatInitDefault();
