@@ -19,23 +19,19 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 #include "SDL_internal.h"
-#include "SDL_main_callbacks.h"
 
-// Add your platform here if you define a custom SDL_RunApp() implementation
-#if !defined(SDL_PLATFORM_WIN32) && \
-    !defined(SDL_PLATFORM_GDK) && \
-    !defined(SDL_PLATFORM_IOS) && \
-    !defined(SDL_PLATFORM_TVOS) && \
-    !defined(SDL_PLATFORM_EMSCRIPTEN) && \
-    !defined(SDL_PLATFORM_OGC) && \
-    !defined(SDL_PLATFORM_PSP) && \
-    !defined(SDL_PLATFORM_PS2) && \
-    !defined(SDL_PLATFORM_3DS)
+#ifndef SDL_ogcpixels_h_
+#define SDL_ogcpixels_h_
 
-int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserved)
-{
-    (void)reserved;
-    return SDL_CallMainFunction(argc, argv, mainFunction);
-}
+#include <gctypes.h>
 
-#endif
+void OGC_pixels_to_texture(void *pixels, SDL_PixelFormat format,
+                           const SDL_Rect *rect, int16_t pitch,
+                           void *texels, int16_t tex_width);
+void OGC_pixels_from_texture(void *pixels, SDL_PixelFormat format,
+                             int16_t w, int16_t h, int16_t pitch,
+                             void *texels);
+
+u8 OGC_texture_format_from_SDL(const SDL_PixelFormat format);
+
+#endif /* SDL_ogcpixels_h_ */

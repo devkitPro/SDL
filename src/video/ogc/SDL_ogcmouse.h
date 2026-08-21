@@ -18,24 +18,18 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "SDL_internal.h"
-#include "SDL_main_callbacks.h"
 
-// Add your platform here if you define a custom SDL_RunApp() implementation
-#if !defined(SDL_PLATFORM_WIN32) && \
-    !defined(SDL_PLATFORM_GDK) && \
-    !defined(SDL_PLATFORM_IOS) && \
-    !defined(SDL_PLATFORM_TVOS) && \
-    !defined(SDL_PLATFORM_EMSCRIPTEN) && \
-    !defined(SDL_PLATFORM_OGC) && \
-    !defined(SDL_PLATFORM_PSP) && \
-    !defined(SDL_PLATFORM_PS2) && \
-    !defined(SDL_PLATFORM_3DS)
+#ifndef SDL_OGC_mouse_h_
+#define SDL_OGC_mouse_h_
 
-int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserved)
-{
-    (void)reserved;
-    return SDL_CallMainFunction(argc, argv, mainFunction);
-}
+#include "../SDL_sysvideo.h"
+#include "../../events/SDL_mouse_c.h"
 
-#endif
+void OGC_InitMouse(SDL_VideoDevice *_this);
+void OGC_QuitMouse(SDL_VideoDevice *_this);
+void OGC_draw_cursor(SDL_VideoDevice *_this);
+void OGC_restore_viewport(SDL_VideoDevice *_this);
+bool OGC_prep_draw_cursor(SDL_VideoDevice *_this);
+SDL_Cursor *OGC_CreateSystemCursor(SDL_SystemCursor id);
+
+#endif /* SDL_OGC_mouse_h_ */

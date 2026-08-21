@@ -290,6 +290,7 @@
 #cmakedefine SDL_AUDIO_DRIVER_PS2 1
 #cmakedefine SDL_AUDIO_DRIVER_N3DS 1
 #cmakedefine SDL_AUDIO_DRIVER_NGAGE 1
+#cmakedefine SDL_AUDIO_DRIVER_OGC 1
 #cmakedefine SDL_AUDIO_DRIVER_QNX 1
 
 #cmakedefine SDL_AUDIO_DRIVER_PRIVATE 1
@@ -311,6 +312,7 @@
 #cmakedefine SDL_JOYSTICK_LINUX 1
 #cmakedefine SDL_JOYSTICK_MFI 1
 #cmakedefine SDL_JOYSTICK_N3DS 1
+#cmakedefine SDL_JOYSTICK_OGC 1
 #cmakedefine SDL_JOYSTICK_PS2 1
 #cmakedefine SDL_JOYSTICK_PSP 1
 #cmakedefine SDL_JOYSTICK_RAWINPUT 1
@@ -379,6 +381,7 @@
 #cmakedefine SDL_TIME_PSP 1
 #cmakedefine SDL_TIME_PS2 1
 #cmakedefine SDL_TIME_N3DS 1
+#cmakedefine SDL_TIME_OGC 1
 #cmakedefine SDL_TIME_NGAGE 1
 
 #cmakedefine SDL_TIME_PRIVATE 1
@@ -391,6 +394,7 @@
 #cmakedefine SDL_TIMER_PSP 1
 #cmakedefine SDL_TIMER_PS2 1
 #cmakedefine SDL_TIMER_N3DS 1
+#cmakedefine SDL_TIMER_OGC 1
 
 #cmakedefine SDL_TIMER_PRIVATE 1
 
@@ -406,6 +410,7 @@
 #cmakedefine SDL_VIDEO_DRIVER_N3DS 1
 #cmakedefine SDL_VIDEO_DRIVER_NGAGE 1
 #cmakedefine SDL_VIDEO_DRIVER_OFFSCREEN 1
+#cmakedefine SDL_VIDEO_DRIVER_OGC 1
 #cmakedefine SDL_VIDEO_DRIVER_PS2 1
 #cmakedefine SDL_VIDEO_DRIVER_PSP 1
 #cmakedefine SDL_VIDEO_DRIVER_RISCOS 1
@@ -459,6 +464,7 @@
 #cmakedefine SDL_VIDEO_RENDER_OGL 1
 #cmakedefine SDL_VIDEO_RENDER_OGL_ES2 1
 #cmakedefine SDL_VIDEO_RENDER_NGAGE 1
+#cmakedefine SDL_VIDEO_RENDER_OGC 1
 #cmakedefine SDL_VIDEO_RENDER_PS2 1
 #cmakedefine SDL_VIDEO_RENDER_PSP 1
 #cmakedefine SDL_VIDEO_RENDER_VITA_GXM 1
@@ -518,6 +524,7 @@
 #cmakedefine SDL_FILESYSTEM_PSP 1
 #cmakedefine SDL_FILESYSTEM_PS2 1
 #cmakedefine SDL_FILESYSTEM_N3DS 1
+#cmakedefine SDL_FILESYSTEM_OGC 1
 
 #cmakedefine SDL_FILESYSTEM_PRIVATE 1
 

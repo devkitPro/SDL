@@ -63,6 +63,8 @@
 #define SDL_DYNAMIC_API 0 // vitasdk doesn't support dynamic linking
 #elif defined(SDL_PLATFORM_3DS)
 #define SDL_DYNAMIC_API 0 // devkitARM doesn't support dynamic linking
+#elif defined(SDL_PLATFORM_OGC)
+#define SDL_DYNAMIC_API 0 // devkitPPC doesn't support dynamic linking
 #elif defined(SDL_PLATFORM_NGAGE)
 #define SDL_DYNAMIC_API 0
 #elif defined(DYNAPI_NEEDS_DLOPEN) && !defined(HAVE_DLOPEN)

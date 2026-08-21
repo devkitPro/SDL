@@ -359,6 +359,8 @@ SDL_Storage *GENERIC_OpenFileStorage(const char *path)
     is_absolute = (ch == '/') ||   // some sort of absolute Unix-style path.
                   (ch == '\\') ||  // some sort of absolute Windows-style path.
                   (((ch >= 'A') && (ch <= 'Z')) && (path[1] == ':') && ((path[2] == '\\') || (path[2] == '/')));  // an absolute path with a drive letter.
+#elif defined(SDL_PLATFORM_OGC)
+    is_absolute = (path[0] == '/') || (strchr(path, ':') != NULL);
 #else
     is_absolute = (path[0] == '/');   // some sort of absolute Unix-style path.
 #endif

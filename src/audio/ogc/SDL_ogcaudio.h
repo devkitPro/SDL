@@ -18,24 +18,33 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "SDL_internal.h"
-#include "SDL_main_callbacks.h"
 
-// Add your platform here if you define a custom SDL_RunApp() implementation
-#if !defined(SDL_PLATFORM_WIN32) && \
-    !defined(SDL_PLATFORM_GDK) && \
-    !defined(SDL_PLATFORM_IOS) && \
-    !defined(SDL_PLATFORM_TVOS) && \
-    !defined(SDL_PLATFORM_EMSCRIPTEN) && \
-    !defined(SDL_PLATFORM_OGC) && \
-    !defined(SDL_PLATFORM_PSP) && \
-    !defined(SDL_PLATFORM_PS2) && \
-    !defined(SDL_PLATFORM_3DS)
+#ifndef _SDL_ogcaudio_h_
+#define _SDL_ogcaudio_h_
 
-int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserved)
+#include <aesndlib.h>
+#include <ogcsys.h>
+
+#include <ogc/mutex.h>
+#include <ogc/semaphore.h>
+
+#define NUM_BUFFERS            4 /* -- Minimum 2! */
+#define SAMPLES_PER_DMA_BUFFER (DSP_STREAMBUFFER_SIZE)
+#define DMA_BUFFER_SIZE        (SAMPLES_PER_DMA_BUFFER * 2 * sizeof(short))
+
+struct SDL_PrivateAudioData
 {
-    (void)reserved;
-    return SDL_CallMainFunction(argc, argv, mainFunction);
-}
+    /* these go first so they will be aligned */
+    Uint8 dma_buffers[NUM_BUFFERS][DMA_BUFFER_SIZE];
+    AESNDPB *voice;
 
-#endif
+    /* Speaker data */
+    Uint32 format;
+    Uint8 bytes_per_sample;
+    s8 nextbuf;
+    s8 playing_buffer;
+    mutex_t lock;
+    sem_t available_buffers;
+};
+
+#endif /* _SDL_ogcaudio_h_ */

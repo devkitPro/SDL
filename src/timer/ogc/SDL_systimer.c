@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,24 +18,32 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
 #include "SDL_internal.h"
-#include "SDL_main_callbacks.h"
 
-// Add your platform here if you define a custom SDL_RunApp() implementation
-#if !defined(SDL_PLATFORM_WIN32) && \
-    !defined(SDL_PLATFORM_GDK) && \
-    !defined(SDL_PLATFORM_IOS) && \
-    !defined(SDL_PLATFORM_TVOS) && \
-    !defined(SDL_PLATFORM_EMSCRIPTEN) && \
-    !defined(SDL_PLATFORM_OGC) && \
-    !defined(SDL_PLATFORM_PSP) && \
-    !defined(SDL_PLATFORM_PS2) && \
-    !defined(SDL_PLATFORM_3DS)
+#ifdef SDL_TIMER_OGC
 
-int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserved)
+#include <ogc/lwp_watchdog.h>
+#include <ogcsys.h>
+
+Uint64 SDL_GetPerformanceCounter(void)
 {
-    (void)reserved;
-    return SDL_CallMainFunction(argc, argv, mainFunction);
+    return gettime();
 }
 
-#endif
+Uint64 SDL_GetPerformanceFrequency(void)
+{
+    return secs_to_ticks(1);
+}
+
+void SDL_SYS_DelayNS(Uint64 ns)
+{
+    struct timespec elapsed, tv;
+    elapsed.tv_sec = ns / SDL_NS_PER_SECOND;
+    elapsed.tv_nsec = ns % SDL_NS_PER_SECOND;
+    tv.tv_sec = elapsed.tv_sec;
+    tv.tv_nsec = elapsed.tv_nsec;
+    nanosleep(&tv, &elapsed);
+}
+
+#endif /* SDL_TIMER_OGC */

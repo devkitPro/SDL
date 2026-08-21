@@ -473,6 +473,16 @@
 #define SDL_PLATFORM_3DS 1
 #endif
 
+#if defined(__wii__) || defined(__gamecube__)
+
+/**
+ * A preprocessor macro that is only defined if compiling for Nintendo Wii or GameCube.
+ *
+ * \since This macro is available since SDL 3.4.0.
+ */
+#define SDL_PLATFORM_OGC 1
+#endif
+
 #ifdef __NGAGE__
 
 /**

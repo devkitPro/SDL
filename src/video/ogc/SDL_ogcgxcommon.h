@@ -19,23 +19,18 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 #include "SDL_internal.h"
-#include "SDL_main_callbacks.h"
 
-// Add your platform here if you define a custom SDL_RunApp() implementation
-#if !defined(SDL_PLATFORM_WIN32) && \
-    !defined(SDL_PLATFORM_GDK) && \
-    !defined(SDL_PLATFORM_IOS) && \
-    !defined(SDL_PLATFORM_TVOS) && \
-    !defined(SDL_PLATFORM_EMSCRIPTEN) && \
-    !defined(SDL_PLATFORM_OGC) && \
-    !defined(SDL_PLATFORM_PSP) && \
-    !defined(SDL_PLATFORM_PS2) && \
-    !defined(SDL_PLATFORM_3DS)
+#ifndef SDL_ogcgxcommon_h_
+#define SDL_ogcgxcommon_h_
 
-int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserved)
-{
-    (void)reserved;
-    return SDL_CallMainFunction(argc, argv, mainFunction);
-}
+#include <gctypes.h>
 
-#endif
+#define GX_COLOR_AS_U32(c) *((u32*)&c)
+
+void OGC_draw_init(int w, int h);
+void OGC_set_viewport(int x, int y, int w, int h);
+void OGC_setup_2d_drawing();
+void OGC_load_texture(void *texels, int w, int h, u8 gx_format,
+                      SDL_ScaleMode scale_mode);
+
+#endif /* SDL_ogcgxcommon_h_ */

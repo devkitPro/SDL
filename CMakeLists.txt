@@ -207,7 +207,7 @@ if(EMSCRIPTEN)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
-if(VITA OR PSP OR PS2 OR N3DS OR RISCOS OR NGAGE)
+if(VITA OR PSP OR PS2 OR N3DS OR RISCOS OR NGAGE OR OGC)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
@@ -304,7 +304,7 @@ dep_option(SDL_SSE3                "Use SSE3 assembly routines" ON "SDL_ASSEMBLY
 dep_option(SDL_SSE4_1              "Use SSE4.1 assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_X86 OR SDL_CPU_X64" OFF)
 dep_option(SDL_SSE4_2              "Use SSE4.2 assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_X86 OR SDL_CPU_X64" OFF)
 dep_option(SDL_MMX                 "Use MMX assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_X86 OR SDL_CPU_X64" OFF)
-dep_option(SDL_ALTIVEC             "Use Altivec assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_POWERPC32 OR SDL_CPU_POWERPC64" OFF)
+dep_option(SDL_ALTIVEC             "Use Altivec assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_POWERPC32 OR SDL_CPU_POWERPC64;NOT OGC" OFF)
 dep_option(SDL_ARMNEON             "Use NEON assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_ARM32 OR SDL_CPU_ARM64" OFF)
 dep_option(SDL_LSX                 "Use LSX assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_LOONGARCH64" OFF)
 dep_option(SDL_LASX                "Use LASX assembly routines" ON "SDL_ASSEMBLY;SDL_CPU_LOONGARCH64" OFF)
@@ -427,6 +427,15 @@ if (NGAGE)
   set(SDL_OFFSCREEN        OFF)
   set(SDL_RENDER_GPU       OFF)
   set(SDL_TRAY             OFF)
+  set(SDL_VIRTUAL_JOYSTICK OFF)
+endif()
+
+if (OGC)
+  set(SDL_DISKAUDIO        OFF)
+  set(SDL_DUMMYAUDIO       OFF)
+  set(SDL_DUMMYCAMERA      OFF)
+  set(SDL_DUMMYVIDEO       OFF)
+  set(SDL_OFFSCREEN        OFF)
   set(SDL_VIRTUAL_JOYSTICK OFF)
 endif()
 
@@ -3335,6 +3344,79 @@ elseif(N3DS)
     "${SDL3_SOURCE_DIR}/src/io/n3ds/*.c"
     "${SDL3_SOURCE_DIR}/src/io/n3ds/*.h"
   )
+
+elseif(OGC)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/main/ogc/*.c")
+  sdl_link_dependency(main LIBS fat)
+  if(NINTENDO_WII)
+    sdl_link_dependency(keyboard LIBS wiikeyboard)
+  endif()
+
+  if(SDL_AUDIO)
+    set(SDL_AUDIO_DRIVER_OGC 1)
+    sdl_glob_sources(
+      "${SDL3_SOURCE_DIR}/src/audio/ogc/*.c"
+      "${SDL3_SOURCE_DIR}/src/audio/ogc/*.h"
+    )
+    sdl_link_dependency(audio LIBS aesnd)
+    set(HAVE_SDL_AUDIO TRUE)
+  endif()
+
+  set(SDL_FILESYSTEM_OGC 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/filesystem/ogc/*.c")
+  set(HAVE_SDL_FILESYSTEM TRUE)
+
+  if(SDL_JOYSTICK)
+    set(SDL_JOYSTICK_OGC 1)
+    sdl_glob_sources("${SDL3_SOURCE_DIR}/src/joystick/ogc/*.c")
+    set(HAVE_SDL_JOYSTICK TRUE)
+  endif()
+
+  set(SDL_TIME_OGC 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/time/ogc/*.c")
+  set(HAVE_SDL_TIME TRUE)
+
+  set(SDL_TIMER_OGC 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/ogc/*.c")
+  set(HAVE_SDL_TIMERS TRUE)
+
+  set(SDL_FSOPS_POSIX 1)
+  sdl_sources("${SDL3_SOURCE_DIR}/src/filesystem/posix/SDL_sysfsops.c")
+  set(HAVE_SDL_FSOPS TRUE)
+
+  if(SDL_VIDEO)
+    set(SDL_VIDEO_DRIVER_OGC 1)
+    set(SDL_VIDEO_RENDER_OGC 1)
+    # Disabled since we have the GX renderer, but this can also be used as an
+    # option:
+    # set(SDL_VIDEO_RENDER_OGL 1)
+    sdl_glob_sources(
+      "${SDL3_SOURCE_DIR}/src/render/ogc/*.c"
+      "${SDL3_SOURCE_DIR}/src/video/ogc/*.c"
+      "${SDL3_SOURCE_DIR}/src/video/ogc/*.h"
+    )
+    pkg_search_module(EGC embedded-game-controller REQUIRED)
+    sdl_include_directories(PRIVATE SYSTEM ${EGC_INCLUDE_DIRS})
+    sdl_link_dependency(egc LIBS embedded-game-controller)
+    if(NINTENDO_WII)
+      sdl_link_dependency(egc LIBS bt-embedded)
+    endif()
+    set(SDL_VIDEO_OPENGL 0)
+    set(HAVE_SDL_VIDEO TRUE)
+    if(SDL_OPENGL)
+      # TODO: is the next line needed?
+      pkg_search_module(OPENGX opengl REQUIRED IMPORTED_TARGET)
+      set(SDL_VIDEO_OPENGL 1)
+      set(HAVE_OPENGL TRUE)
+      sdl_link_dependency(opengx LIBS opengx)
+    endif()
+  endif()
+
+  set(SDL_PTHREADS ON)
+  set(HAVE_SDL_THREADS TRUE)
+  set(SDL_PTHREADS_SEM ON)
+  message(STATUS "pthread")
+  CheckPTHREAD()
 
 elseif(NGAGE)
 

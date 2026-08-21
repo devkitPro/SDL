@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -18,24 +18,33 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "SDL_internal.h"
-#include "SDL_main_callbacks.h"
+#include "../../SDL_internal.h"
 
-// Add your platform here if you define a custom SDL_RunApp() implementation
-#if !defined(SDL_PLATFORM_WIN32) && \
-    !defined(SDL_PLATFORM_GDK) && \
-    !defined(SDL_PLATFORM_IOS) && \
-    !defined(SDL_PLATFORM_TVOS) && \
-    !defined(SDL_PLATFORM_EMSCRIPTEN) && \
-    !defined(SDL_PLATFORM_OGC) && \
-    !defined(SDL_PLATFORM_PSP) && \
-    !defined(SDL_PLATFORM_PS2) && \
-    !defined(SDL_PLATFORM_3DS)
+#ifndef SDL_ogcvideo_h_
+#define SDL_ogcvideo_h_
 
-int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserved)
+#include "../SDL_sysvideo.h"
+
+#include <ogc/gx_struct.h>
+
+typedef struct SDL_VideoData
 {
-    (void)reserved;
-    return SDL_CallMainFunction(argc, argv, mainFunction);
-}
+    GXRModeObj *vmode;
+    u8 *gp_fifo;
+    void *xfb[2];
+    u8 fb_index;
+} SDL_VideoData;
 
-#endif
+typedef struct SDL_WindowData
+{
+    void *pixels;
+    u8 *texels;
+    SDL_PixelFormat surface_format;
+} SDL_WindowData;
+
+void *OGC_video_get_xfb(SDL_VideoDevice *device);
+void OGC_video_flip(SDL_VideoDevice *device, bool vsync);
+
+#endif /* SDL_ogcvideo_h_ */
+
+/* vi: set ts=4 sw=4 expandtab: */

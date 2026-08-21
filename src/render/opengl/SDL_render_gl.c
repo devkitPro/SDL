@@ -1760,6 +1760,10 @@ static bool GL_SetVSync(SDL_Renderer *renderer, const int vsync)
     return true;
 }
 
+#ifdef SDL_VIDEO_DRIVER_OGC
+#include <opengx.h>
+#endif
+
 static bool GL_CreateRenderer(SDL_Renderer *renderer, SDL_Window *window, SDL_PropertiesID create_props)
 {
     GL_RenderData *data = NULL;
@@ -1772,6 +1776,9 @@ static bool GL_CreateRenderer(SDL_Renderer *renderer, SDL_Window *window, SDL_Pr
     bool non_power_of_two_supported = false;
     bool bgra_supported = false;
 
+#ifdef SDL_VIDEO_DRIVER_OGC
+    ogx_enable_module_fbo();
+#endif
     SDL_SetupRendererColorspace(renderer, create_props);
 
     if (renderer->output_colorspace != SDL_COLORSPACE_SRGB) {

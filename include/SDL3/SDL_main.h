@@ -228,6 +228,16 @@
         */
         #define SDL_MAIN_AVAILABLE
 
+    #elif defined(SDL_PLATFORM_OGC)
+        /*
+          On OGC, SDL provides a main function that sets up the filesystem,
+          checks the IOS and registers callbacks for the power and reset
+          buttons.
+
+          If you provide this yourself, you may define SDL_MAIN_HANDLED
+        */
+        #define SDL_MAIN_AVAILABLE
+
     #endif
 #endif /* SDL_MAIN_HANDLED */
 

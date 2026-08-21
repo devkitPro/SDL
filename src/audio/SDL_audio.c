@@ -80,6 +80,9 @@ static const AudioBootStrap *const bootstrap[] = {
 #ifdef SDL_AUDIO_DRIVER_NGAGE
     &NGAGEAUDIO_bootstrap,
 #endif
+#ifdef SDL_AUDIO_DRIVER_OGC
+    &OGCAUDIO_bootstrap,
+#endif
 #ifdef SDL_AUDIO_DRIVER_EMSCRIPTEN
     &EMSCRIPTENAUDIO_bootstrap,
 #endif

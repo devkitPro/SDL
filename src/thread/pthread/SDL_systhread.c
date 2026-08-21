@@ -162,6 +162,7 @@ void SDL_SYS_SetupThread(const char *name)
 #endif
     }
 
+#ifndef SDL_PLATFORM_OGC
 #ifdef HAVE_SIGNAL_H
     // Mask asynchronous signals for this thread
     sigemptyset(&mask);
@@ -169,6 +170,7 @@ void SDL_SYS_SetupThread(const char *name)
         sigaddset(&mask, sig_list[i]);
     }
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
+#endif
 #endif
 
 #ifdef PTHREAD_CANCEL_ASYNCHRONOUS
@@ -187,7 +189,7 @@ SDL_ThreadID SDL_GetCurrentThreadID(void)
 
 bool SDL_SYS_SetThreadPriority(SDL_ThreadPriority priority)
 {
-#ifdef SDL_PLATFORM_RISCOS
+#ifndef _POSIX_PRIORITY_SCHEDULING
     // FIXME: Setting thread priority does not seem to be supported
     return true;
 #else
